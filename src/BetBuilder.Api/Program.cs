@@ -43,6 +43,14 @@ builder.WebHost.ConfigureKestrel(opts =>
     opts.Limits.MaxRequestBodySize = 10 * 1024 * 1024; // 10 MB
 });
 
+builder.Services.AddCors(opts =>
+{
+    opts.AddDefaultPolicy(policy => policy
+        .AllowAnyOrigin()
+        .AllowAnyMethod()
+        .AllowAnyHeader());
+});
+
 builder.Services.AddHealthChecks()
     .AddCheck<SnapshotHealthCheck>("snapshot_loaded");
 
@@ -52,6 +60,9 @@ builder.WebHost.UseUrls($"http://+:{port}");
 var app = builder.Build();
 
 app.UseMiddleware<GlobalExceptionHandler>();
+app.UseCors();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.MapControllers();
 app.MapHealthChecks("/health");
 
