@@ -2,13 +2,13 @@
 	"info": {
 		"_postman_id": "bb-combo-pricing-api",
 		"name": "BetBuilder Combo Pricing API",
-		"description": "In-play combo pricing API for MMA bet-builder markets.\n\nBase URL defaults to http://localhost:8080 (Docker) or http://localhost:5199 (local dev).",
+		"description": "In-play combo pricing API for MMA bet-builder markets.\n\nBase URL defaults to Railway production. Change baseUrl variable to http://localhost:8080 for local Docker or http://localhost:5199 for local dev.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
 		{
 			"key": "baseUrl",
-			"value": "http://localhost:8080",
+			"value": "https://builder-production-2b5b.up.railway.app",
 			"type": "string"
 		}
 	],
@@ -23,8 +23,12 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/health",
-							"host": ["{{baseUrl}}"],
-							"path": ["health"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"health"
+							]
 						},
 						"description": "Returns Healthy if an active snapshot is loaded."
 					}
@@ -39,7 +43,10 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -47,8 +54,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/pricing/combo",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "v1", "pricing", "combo"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pricing",
+								"combo"
+							]
 						},
 						"description": "Prices a 2-leg combo using the active snapshot."
 					}
@@ -58,7 +72,10 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -66,8 +83,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/pricing/combo",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "v1", "pricing", "combo"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pricing",
+								"combo"
+							]
 						},
 						"description": "bb_red_ko implies bb_red_win so a RedundantSelection warning is returned but combo is still priced."
 					}
@@ -77,7 +101,10 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -85,8 +112,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/pricing/combo",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "v1", "pricing", "combo"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pricing",
+								"combo"
+							]
 						},
 						"description": "Prices against a specific snapshot (ts3) instead of the active one."
 					}
@@ -96,7 +130,10 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -104,8 +141,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/pricing/combo",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "v1", "pricing", "combo"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pricing",
+								"combo"
+							]
 						},
 						"description": "bb_red_win and bb_blue_win are mutually exclusive. Returns valid=false with MutuallyExclusive error."
 					}
@@ -115,7 +159,10 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -123,8 +170,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/pricing/combo",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "v1", "pricing", "combo"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pricing",
+								"combo"
+							]
 						},
 						"description": "bb_nonexistent_leg does not exist. Returns valid=false with UnknownLeg error."
 					}
@@ -134,7 +188,10 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -142,8 +199,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/pricing/combo",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "v1", "pricing", "combo"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pricing",
+								"combo"
+							]
 						},
 						"description": "Same leg twice. Returns valid=false with DuplicateLeg error."
 					}
@@ -153,7 +217,10 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -161,8 +228,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/pricing/combo",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "v1", "pricing", "combo"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pricing",
+								"combo"
+							]
 						},
 						"description": "5-leg combo across result, knockdowns, and fighter stat markets."
 					}
@@ -172,7 +246,10 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -180,8 +257,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/pricing/combo",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "v1", "pricing", "combo"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pricing",
+								"combo"
+							]
 						},
 						"description": "over_94.5 implies over_40.5. Prices successfully but returns RedundantSelection warning."
 					}
@@ -198,8 +282,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/snapshots",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "v1", "snapshots"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"snapshots"
+							]
 						},
 						"description": "Returns metadata for every loaded snapshot."
 					}
@@ -211,8 +301,15 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/snapshots/active",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "v1", "snapshots", "active"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"snapshots",
+								"active"
+							]
 						},
 						"description": "Returns metadata for the currently active pricing snapshot."
 					}
@@ -227,7 +324,10 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -235,8 +335,16 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/admin/snapshots/upload",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "v1", "admin", "snapshots", "upload"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"snapshots",
+								"upload"
+							]
 						},
 						"description": "Primary in-play update endpoint. Push new simulation data as CSV content. Only outcomeMatrixCsv is required; legProbsCsv and correlationMatrixCsv are optional. Set activate=true to immediately use for pricing."
 					}
@@ -246,7 +354,10 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -254,8 +365,16 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/admin/snapshots/upload",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "v1", "admin", "snapshots", "upload"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"snapshots",
+								"upload"
+							]
 						},
 						"description": "Uploads a snapshot without activating it. Can be activated later. Useful for staging."
 					}
@@ -267,8 +386,17 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/admin/snapshots/activate/ts3",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "v1", "admin", "snapshots", "activate", "ts3"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"snapshots",
+								"activate",
+								"ts3"
+							]
 						},
 						"description": "Atomically swap the active pricing snapshot. Change ts3 in the URL to any loaded snapshot ID."
 					}
@@ -280,8 +408,16 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/v1/admin/snapshots/reload",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "v1", "admin", "snapshots", "reload"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"snapshots",
+								"reload"
+							]
 						},
 						"description": "Re-reads all CSV files from the data directory and rebuilds every snapshot."
 					}
