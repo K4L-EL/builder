@@ -17,7 +17,8 @@ public sealed class SnapshotHealthCheck : IHealthCheck
     {
         var active = _store.GetActiveSnapshot();
         if (active == null)
-            return Task.FromResult(HealthCheckResult.Unhealthy("No active snapshot loaded."));
+            return Task.FromResult(HealthCheckResult.Degraded(
+                "No active snapshot loaded. Use POST /api/v1/admin/snapshots/upload to push data."));
 
         var data = new Dictionary<string, object>
         {

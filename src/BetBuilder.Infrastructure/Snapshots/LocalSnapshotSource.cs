@@ -30,7 +30,10 @@ public sealed class LocalSnapshotSource : ISnapshotSource
     {
         var dir = _settings.DataDirectory;
         if (!Directory.Exists(dir))
-            throw new DirectoryNotFoundException($"Data directory not found: {dir}");
+        {
+            _logger.LogWarning("Data directory not found: {Directory}, returning empty set", dir);
+            return Array.Empty<SnapshotFileGroup>();
+        }
 
         var files = Directory.GetFiles(dir, "*.csv");
         var groups = new Dictionary<string, (string? outcome, string? prob, string? corr)>();

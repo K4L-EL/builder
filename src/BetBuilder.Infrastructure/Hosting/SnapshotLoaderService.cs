@@ -34,7 +34,13 @@ public sealed class SnapshotLoaderService : IHostedService
 
         var groups = _source.DiscoverSnapshots();
         if (groups.Count == 0)
-            throw new InvalidOperationException("No snapshot file groups found.");
+        {
+            _logger.LogWarning(
+                "No snapshot file groups found in data directory. " +
+                "The API will start without pre-loaded snapshots. " +
+                "Use POST /api/v1/admin/snapshots/upload to push snapshot data.");
+            return Task.CompletedTask;
+        }
 
         foreach (var group in groups)
         {
