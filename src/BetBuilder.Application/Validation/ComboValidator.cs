@@ -7,7 +7,23 @@ namespace BetBuilder.Application.Validation;
 public sealed class PricingSettings
 {
     public const string SectionName = "Pricing";
-    public double MarginPercent { get; set; } = 5.0;
+
+    /// <summary>
+    /// Minimum margin applied at odds of 1.0 (the intercept).
+    /// </summary>
+    public double BaseMarginPercent { get; set; } = 5.0;
+
+    /// <summary>
+    /// How fast margin grows with odds length.
+    /// marginPercent = BaseMarginPercent + MarginScaleFactor * ln(fairOdds)
+    /// </summary>
+    public double MarginScaleFactor { get; set; } = 7.5;
+
+    /// <summary>
+    /// Hard cap on margin percent so extreme longshots don't get 90%+ margin.
+    /// </summary>
+    public double MaxMarginPercent { get; set; } = 50.0;
+
     public double OddsFloor { get; set; } = 1.01;
     public double OddsCap { get; set; } = 1000.0;
     public int MaxLegs { get; set; } = 12;

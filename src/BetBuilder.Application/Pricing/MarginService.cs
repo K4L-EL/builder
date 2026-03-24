@@ -20,9 +20,12 @@ public sealed class MarginService : IMarginService
 
         var fairOdds = 1.0 / jointProbability;
 
-        // Margin shortens the odds (reduces the payout)
-        var marginMultiplier = 1.0 - (_settings.MarginPercent / 100.0);
-        var pricedOdds = fairOdds * marginMultiplier;
+        // Scaled margin: longer odds get proportionally higher margin
+        var marginPercent = _settings.BaseMarginPercent
+                          + _settings.MarginScaleFactor * Math.Log(Math.Max(fairOdds, 1.0));
+        marginPercent = Math.Min(marginPercent, _settings.MaxMarginPercent);
+
+        var pricedOdds = fairOdds * (1.0 - marginPercent / 100.0);
 
         pricedOdds = Math.Max(pricedOdds, _settings.OddsFloor);
         pricedOdds = Math.Min(pricedOdds, _settings.OddsCap);
