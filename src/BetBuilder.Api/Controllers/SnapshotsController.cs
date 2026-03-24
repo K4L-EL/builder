@@ -11,10 +11,12 @@ namespace BetBuilder.Api.Controllers;
 public sealed class SnapshotsController : ControllerBase
 {
     private readonly IActiveSnapshotStore _store;
+    private readonly IMarginService _marginService;
 
-    public SnapshotsController(IActiveSnapshotStore store)
+    public SnapshotsController(IActiveSnapshotStore store, IMarginService marginService)
     {
         _store = store;
+        _marginService = marginService;
     }
 
     [HttpGet]
@@ -52,14 +54,21 @@ public sealed class SnapshotsController : ControllerBase
         if (snapshot == null)
             return NotFound(new ProblemDetails { Title = "No active snapshot." });
 
-        var legs = snapshot.Legs.Select((name, i) => new
+        var legs = snapshot.Legs.Select((name, i) =>
         {
-            name,
-            probability = snapshot.LegProbabilities[i],
-            fairOdds = snapshot.LegProbabilities[i] > 0
-                ? Math.Round(1.0 / snapshot.LegProbabilities[i], 2)
-                : (double?)null,
-            available = !snapshot.UnavailableLegs.Contains(name)
+            var prob = snapshot.LegProbabilities[i];
+            var available = !snapshot.UnavailableLegs.Contains(name);
+            double? fairOdds = null;
+            double? pricedOdds = null;
+
+            if (prob > 0 && available)
+            {
+                var result = _marginService.Apply(prob);
+                fairOdds = result.FairDecimalOdds;
+                pricedOdds = result.PricedDecimalOdds;
+            }
+
+            return new { name, probability = prob, fairOdds, pricedOdds, available };
         }).ToList();
 
         return Ok(new

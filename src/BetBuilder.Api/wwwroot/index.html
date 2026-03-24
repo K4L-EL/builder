@@ -513,7 +513,7 @@ function renderMarkets() {
                data-leg="${leg.name}"
                onclick="toggleLeg('${leg.name}', ${leg.available})">
             <div class="leg-label">${formatLegName(leg.name)}</div>
-            <div class="leg-odds">${leg.available && leg.fairOdds ? leg.fairOdds.toFixed(2) : '—'}</div>
+            <div class="leg-odds">${leg.available && leg.pricedOdds ? leg.pricedOdds.toFixed(2) : '—'}</div>
           </div>
         `).join('')}
       </div>

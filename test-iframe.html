@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bet Builder - Iframe Test</title>
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #1a1a2e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, sans-serif;
+  }
+  .wrapper {
+    text-align: center;
+  }
+  .wrapper h2 {
+    color: #8b8b9e;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  iframe {
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  #log {
+    max-width: 480px;
+    margin: 20px auto 0;
+    text-align: left;
+    color: #00dc82;
+    font-family: monospace;
+    font-size: 12px;
+    background: #0d1117;
+    border-radius: 8px;
+    padding: 12px;
+    max-height: 150px;
+    overflow-y: auto;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <h2>Iframe Embed Test</h2>
+  <iframe
+    src="https://builder-production-2b5b.up.railway.app"
+    width="480"
+    height="700"
+    style="border:none; border-radius:12px;"
+  ></iframe>
+  <div id="log"></div>
+</div>
+<script>
+  const log = document.getElementById('log');
+  window.addEventListener('message', (e) => {
+    if (e.data?.type === 'BETBUILDER_PLACE_BET') {
+      log.style.display = 'block';
+      const line = document.createElement('div');
+      line.textContent = `[BET] ${e.data.legs.length} legs @ ${e.data.odds.toFixed(2)} · $${e.data.stake} → $${e.data.payout.toFixed(2)}`;
+      log.prepend(line);
+      console.log('Bet received:', e.data);
+    }
+  });
+</script>
+</body>
+</html>
