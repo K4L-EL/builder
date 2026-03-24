@@ -1,0 +1,22 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.vs/
+.vscode/
+.idea/
+
+## Build
+publish/
+out/
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Cursor
+.cursor/
+
+## Test results
+TestResults/

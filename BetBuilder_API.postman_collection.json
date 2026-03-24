@@ -1,0 +1,292 @@
+{
+	"info": {
+		"_postman_id": "bb-combo-pricing-api",
+		"name": "BetBuilder Combo Pricing API",
+		"description": "In-play combo pricing API for MMA bet-builder markets.\n\nBase URL defaults to http://localhost:8080 (Docker) or http://localhost:5199 (local dev).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["health"]
+						},
+						"description": "Returns Healthy if an active snapshot is loaded."
+					}
+				}
+			]
+		},
+		{
+			"name": "Pricing",
+			"item": [
+				{
+					"name": "Price Combo - Simple 2-leg",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"eventId\": \"ufc_303\",\n  \"legs\": [\n    \"bb_red_win\",\n    \"bb_knockdowns_over_0_5\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/pricing/combo",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "pricing", "combo"]
+						},
+						"description": "Prices a 2-leg combo using the active snapshot."
+					}
+				},
+				{
+					"name": "Price Combo - 3 legs with redundancy warning",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"eventId\": \"ufc_303\",\n  \"legs\": [\n    \"bb_red_win\",\n    \"bb_red_ko\",\n    \"bb_knockdowns_over_0_5\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/pricing/combo",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "pricing", "combo"]
+						},
+						"description": "bb_red_ko implies bb_red_win so a RedundantSelection warning is returned but combo is still priced."
+					}
+				},
+				{
+					"name": "Price Combo - Specific snapshot",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"eventId\": \"ufc_303\",\n  \"snapshotId\": \"ts3\",\n  \"legs\": [\n    \"bb_red_win\",\n    \"bb_red_tsl_over_40_5\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/pricing/combo",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "pricing", "combo"]
+						},
+						"description": "Prices against a specific snapshot (ts3) instead of the active one."
+					}
+				},
+				{
+					"name": "Price Combo - Mutually exclusive (expect error)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"eventId\": \"ufc_303\",\n  \"legs\": [\n    \"bb_red_win\",\n    \"bb_blue_win\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/pricing/combo",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "pricing", "combo"]
+						},
+						"description": "bb_red_win and bb_blue_win are mutually exclusive. Returns valid=false with MutuallyExclusive error."
+					}
+				},
+				{
+					"name": "Price Combo - Unknown leg (expect error)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"eventId\": \"ufc_303\",\n  \"legs\": [\n    \"bb_red_win\",\n    \"bb_nonexistent_leg\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/pricing/combo",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "pricing", "combo"]
+						},
+						"description": "bb_nonexistent_leg does not exist. Returns valid=false with UnknownLeg error."
+					}
+				},
+				{
+					"name": "Price Combo - Duplicate leg (expect error)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"eventId\": \"ufc_303\",\n  \"legs\": [\n    \"bb_red_win\",\n    \"bb_red_win\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/pricing/combo",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "pricing", "combo"]
+						},
+						"description": "Same leg twice. Returns valid=false with DuplicateLeg error."
+					}
+				},
+				{
+					"name": "Price Combo - Big 5-leg parlay",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"eventId\": \"ufc_303\",\n  \"legs\": [\n    \"bb_red_win\",\n    \"bb_knockdowns_over_0_5\",\n    \"bb_red_tsl_over_40_5\",\n    \"bb_blue_tsl_over_40_5\",\n    \"bb_knockdowns_over_2_5\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/pricing/combo",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "pricing", "combo"]
+						},
+						"description": "5-leg combo across result, knockdowns, and fighter stat markets."
+					}
+				},
+				{
+					"name": "Price Combo - Threshold redundancy warning",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"eventId\": \"ufc_303\",\n  \"legs\": [\n    \"bb_red_tsl_over_94_5\",\n    \"bb_red_tsl_over_40_5\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/pricing/combo",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "pricing", "combo"]
+						},
+						"description": "over_94.5 implies over_40.5. Prices successfully but returns RedundantSelection warning."
+					}
+				}
+			]
+		},
+		{
+			"name": "Snapshots",
+			"item": [
+				{
+					"name": "List All Snapshots",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/snapshots",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "snapshots"]
+						},
+						"description": "Returns metadata for every loaded snapshot."
+					}
+				},
+				{
+					"name": "Get Active Snapshot",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/snapshots/active",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "snapshots", "active"]
+						},
+						"description": "Returns metadata for the currently active pricing snapshot."
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Upload Snapshot (In-Play Update)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"snapshotId\": \"live_r1\",\n  \"eventId\": \"ufc_303\",\n  \"modelVersion\": \"2.1\",\n  \"activate\": true,\n  \"outcomeMatrixCsv\": \"bb_red_win,bb_blue_win,bb_draw,bb_red_ko,bb_red_decision,bb_knockdowns_over_0_5,bb_knockdowns_over_1_5\\n1,0,0,1,0,1,1\\n1,0,0,1,0,1,0\\n1,0,0,0,1,0,0\\n0,1,0,0,0,1,1\\n0,0,1,0,0,0,0\\n1,0,0,1,0,1,1\\n1,0,0,0,1,1,0\\n0,1,0,0,0,0,0\\n1,0,0,1,0,1,1\\n1,0,0,0,1,0,0\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/snapshots/upload",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "snapshots", "upload"]
+						},
+						"description": "Primary in-play update endpoint. Push new simulation data as CSV content. Only outcomeMatrixCsv is required; legProbsCsv and correlationMatrixCsv are optional. Set activate=true to immediately use for pricing."
+					}
+				},
+				{
+					"name": "Upload Snapshot (without activating)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"snapshotId\": \"staged_r2\",\n  \"eventId\": \"ufc_303\",\n  \"modelVersion\": \"2.2\",\n  \"activate\": false,\n  \"outcomeMatrixCsv\": \"bb_red_win,bb_blue_win,bb_draw,bb_red_ko,bb_red_decision\\n1,0,0,1,0\\n1,0,0,1,0\\n1,0,0,0,1\\n0,1,0,0,0\\n0,0,1,0,0\\n1,0,0,1,0\\n1,0,0,0,1\\n1,0,0,1,0\\n1,0,0,1,0\\n0,1,0,0,0\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/snapshots/upload",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "snapshots", "upload"]
+						},
+						"description": "Uploads a snapshot without activating it. Can be activated later. Useful for staging."
+					}
+				},
+				{
+					"name": "Activate Snapshot",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/snapshots/activate/ts3",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "snapshots", "activate", "ts3"]
+						},
+						"description": "Atomically swap the active pricing snapshot. Change ts3 in the URL to any loaded snapshot ID."
+					}
+				},
+				{
+					"name": "Reload Snapshots from Disk",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/snapshots/reload",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "snapshots", "reload"]
+						},
+						"description": "Re-reads all CSV files from the data directory and rebuilds every snapshot."
+					}
+				}
+			]
+		}
+	]
+}

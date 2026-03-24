@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  betbuilder-api:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data:ro
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Data__DataDirectory=/app/data
+      - Data__DefaultSnapshot=ts0
+      - Pricing__MarginPercent=5.0
+      - Pricing__MaxLegs=12
+    restart: unless-stopped
