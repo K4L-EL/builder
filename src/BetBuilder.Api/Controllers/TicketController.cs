@@ -76,6 +76,6 @@ public sealed class TicketController : ControllerBase
 public sealed class PlaceTicketRequest
 {
     [Required] public string UserId { get; set; } = default!;
-    [Required][MinLength(2)] public string[] Legs { get; set; } = Array.Empty<string>();
+    [Required][MinLength(1)] public string[] Legs { get; set; } = Array.Empty<string>();
     [Required] public decimal Stake { get; set; }
 }
