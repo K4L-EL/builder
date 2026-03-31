@@ -47,9 +47,9 @@
 <div class="wrapper">
   <h2>Iframe Embed Test</h2>
   <iframe
-    src="https://builder-production-2b5b.up.railway.app"
+    src="https://builder-production-2b5b.up.railway.app?userId=demo_user_1"
     width="480"
-    height="700"
+    height="800"
     style="border:none; border-radius:12px;"
   ></iframe>
   <div id="log"></div>
@@ -57,12 +57,12 @@
 <script>
   const log = document.getElementById('log');
   window.addEventListener('message', (e) => {
-    if (e.data?.type === 'BETBUILDER_PLACE_BET') {
+    if (e.data?.type === 'BETBUILDER_BET_PLACED') {
       log.style.display = 'block';
       const line = document.createElement('div');
-      line.textContent = `[BET] ${e.data.legs.length} legs @ ${e.data.odds.toFixed(2)} · $${e.data.stake} → $${e.data.payout.toFixed(2)}`;
+      line.textContent = `[TICKET] ${e.data.ticketId} · ${e.data.legs.length} legs @ ${e.data.odds.toFixed(2)} · $${e.data.stake} → $${e.data.potentialPayout.toFixed(2)}`;
       log.prepend(line);
-      console.log('Bet received:', e.data);
+      console.log('Ticket placed:', e.data);
     }
   });
 </script>

@@ -5,15 +5,34 @@ using BetBuilder.Api.Middleware;
 using BetBuilder.Application.Interfaces;
 using BetBuilder.Application.Pricing;
 using BetBuilder.Application.Validation;
+using BetBuilder.Infrastructure.Data;
 using BetBuilder.Infrastructure.Hosting;
 using BetBuilder.Infrastructure.Rules;
 using BetBuilder.Infrastructure.Snapshots;
 using BetBuilder.Infrastructure.State;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<DataSettings>(builder.Configuration.GetSection(DataSettings.SectionName));
 builder.Services.Configure<PricingSettings>(builder.Configuration.GetSection(PricingSettings.SectionName));
+
+// PostgreSQL -- Railway provides DATABASE_URL, or fall back to connection string in config
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+if (!string.IsNullOrEmpty(databaseUrl))
+{
+    var uri = new Uri(databaseUrl);
+    var userInfo = uri.UserInfo.Split(':');
+    var connStr = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')}" +
+                  $";Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+    builder.Services.AddDbContext<BetBuilderDbContext>(opts => opts.UseNpgsql(connStr));
+}
+else
+{
+    var connStr = builder.Configuration.GetConnectionString("Default")
+        ?? "Host=localhost;Port=5432;Database=betbuilder;Username=betbuilder;Password=betbuilder";
+    builder.Services.AddDbContext<BetBuilderDbContext>(opts => opts.UseNpgsql(connStr));
+}
 
 builder.Services.AddSingleton<IActiveSnapshotStore, ActiveSnapshotStore>();
 builder.Services.AddSingleton<ISnapshotSource, LocalSnapshotSource>();
@@ -25,6 +44,10 @@ builder.Services.AddSingleton<IJointProbabilityCalculator, JointProbabilityCalcu
 builder.Services.AddSingleton<IMarginService, MarginService>();
 builder.Services.AddSingleton<IComboPricingService, ComboPricingService>();
 
+builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<ITicketService, TicketService>();
+
+builder.Services.AddHostedService<DatabaseMigrationService>();
 builder.Services.AddHostedService<SnapshotLoaderService>();
 
 builder.Services.AddControllers(opts =>

@@ -1,6 +1,17 @@
 version: "3.8"
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: betbuilder
+      POSTGRES_PASSWORD: betbuilder
+      POSTGRES_DB: betbuilder
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
   betbuilder-api:
     build: .
     ports:
@@ -11,6 +22,14 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - Data__DataDirectory=/app/data
       - Data__DefaultSnapshot=ts0
-      - Pricing__MarginPercent=5.0
+      - Pricing__BaseMarginPercent=5.0
+      - Pricing__MarginScaleFactor=7.5
+      - Pricing__MaxMarginPercent=50.0
       - Pricing__MaxLegs=12
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=betbuilder;Username=betbuilder;Password=betbuilder
+    depends_on:
+      - postgres
     restart: unless-stopped
+
+volumes:
+  pgdata:

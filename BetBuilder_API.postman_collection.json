@@ -419,7 +419,154 @@
 								"reload"
 							]
 						},
-						"description": "Re-reads all CSV files from the data directory and rebuilds every snapshot."
+				"description": "Re-reads all CSV files from the data directory and rebuilds every snapshot."
+				}
+			}
+		]
+		},
+		{
+			"name": "Wallet",
+			"item": [
+				{
+					"name": "Get Balance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/wallet/demo_user_1/balance",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "wallet", "demo_user_1", "balance"]
+						}
+					}
+				},
+				{
+					"name": "Deposit",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"demo_user_1\",\n  \"amount\": 100.00\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/wallet/deposit",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "wallet", "deposit"]
+						}
+					}
+				},
+				{
+					"name": "Withdraw",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"demo_user_1\",\n  \"amount\": 25.00\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/wallet/withdraw",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "wallet", "withdraw"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Tickets",
+			"item": [
+				{
+					"name": "Place Bet",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"demo_user_1\",\n  \"legs\": [\"bb_red_win\", \"bb_knockdowns_over_0_5\"],\n  \"stake\": 10.00\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/tickets/place",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "tickets", "place"]
+						}
+					}
+				},
+				{
+					"name": "List User Tickets",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/tickets/demo_user_1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "tickets", "demo_user_1"]
+						}
+					}
+				},
+				{
+					"name": "Get Ticket Detail",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/tickets/ticket/{{ticketId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "tickets", "ticket", "{{ticketId}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Ticket Admin",
+			"item": [
+				{
+					"name": "Settle Ticket (Won)",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ticketId\": \"{{ticketId}}\",\n  \"result\": \"won\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/tickets/settle",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "tickets", "settle"]
+						}
+					}
+				},
+				{
+					"name": "Settle Ticket (Lost)",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ticketId\": \"{{ticketId}}\",\n  \"result\": \"lost\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/tickets/settle",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "tickets", "settle"]
+						}
+					}
+				},
+				{
+					"name": "Settle Ticket (Void)",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ticketId\": \"{{ticketId}}\",\n  \"result\": \"void\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/tickets/settle",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "tickets", "settle"]
+						}
 					}
 				}
 			]
