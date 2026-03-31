@@ -20,12 +20,19 @@ public sealed class DatabaseMigrationService : IHostedService
     {
         _logger.LogInformation("Applying database migrations...");
 
-        using var scope = _services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<BetBuilderDbContext>();
-
-        await db.Database.EnsureCreatedAsync(cancellationToken);
-
-        _logger.LogInformation("Database schema ready.");
+        try
+        {
+            using var scope = _services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<BetBuilderDbContext>();
+            await db.Database.EnsureCreatedAsync(cancellationToken);
+            _logger.LogInformation("Database schema ready.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Could not connect to database. Wallet/ticket features will be unavailable " +
+                "until DATABASE_URL is configured.");
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
