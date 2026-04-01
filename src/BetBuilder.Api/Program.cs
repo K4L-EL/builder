@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BetBuilder.Api.GrpcServices;
 using BetBuilder.Api.Health;
 using BetBuilder.Api.Middleware;
 using BetBuilder.Application.Interfaces;
@@ -10,6 +11,7 @@ using BetBuilder.Infrastructure.Hosting;
 using BetBuilder.Infrastructure.Rules;
 using BetBuilder.Infrastructure.Snapshots;
 using BetBuilder.Infrastructure.State;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,6 +52,11 @@ builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddHostedService<DatabaseMigrationService>();
 builder.Services.AddHostedService<SnapshotLoaderService>();
 
+builder.Services.AddGrpc(opts =>
+{
+    opts.MaxReceiveMessageSize = 10 * 1024 * 1024; // 10 MB for large matrices
+});
+
 builder.Services.AddControllers(opts =>
     {
         // Outcome matrix uploads can be 200KB+ as CSV text in JSON body
@@ -64,6 +71,7 @@ builder.Services.AddControllers(opts =>
 builder.WebHost.ConfigureKestrel(opts =>
 {
     opts.Limits.MaxRequestBodySize = 10 * 1024 * 1024; // 10 MB
+    opts.ConfigureEndpointDefaults(lo => lo.Protocols = HttpProtocols.Http1AndHttp2);
 });
 
 builder.Services.AddCors(opts =>
@@ -87,6 +95,7 @@ app.UseCors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapControllers();
+app.MapGrpcService<SnapshotIngestService>();
 app.MapHealthChecks("/health");
 
 app.Run();

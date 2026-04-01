@@ -68,6 +68,52 @@ public sealed class SnapshotAdminController : ControllerBase
         return Ok(ResponseMapper.ToSnapshotInfo(snapshot));
     }
 
+    /// <summary>
+    /// Upload a binary-packed outcome matrix. ~15x smaller than CSV for large simulations.
+    /// The model pipeline should prefer this endpoint for high-frequency in-play updates.
+    /// </summary>
+    [HttpPost("upload/binary")]
+    [ProducesResponseType(typeof(SnapshotInfoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public IActionResult UploadBinary([FromBody] BinarySnapshotUploadRequest request)
+    {
+        byte[] packed;
+        try { packed = Convert.FromBase64String(request.PackedRowsBase64); }
+        catch (FormatException)
+        {
+            return BadRequest(new ProblemDetails { Title = "Invalid base64", Detail = "PackedRowsBase64 is not valid base64." });
+        }
+
+        var content = new SnapshotBinaryContent
+        {
+            SnapshotId = request.SnapshotId,
+            Legs = request.Legs,
+            PackedRows = packed,
+            ScenarioCount = request.ScenarioCount,
+            EventId = request.EventId,
+            ModelVersion = request.ModelVersion
+        };
+
+        var snapshot = _factory.BuildFromBinary(content);
+        _store.LoadSnapshot(snapshot);
+
+        if (request.Activate)
+        {
+            _store.SetActiveSnapshot(snapshot.SnapshotId);
+            _logger.LogInformation(
+                "Uploaded (binary) and activated snapshot {SnapshotId}: {LegCount} legs, {ScenarioCount} scenarios",
+                snapshot.SnapshotId, snapshot.LegCount, snapshot.ScenarioCount);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Uploaded (binary) snapshot {SnapshotId} (not activated): {LegCount} legs, {ScenarioCount} scenarios",
+                snapshot.SnapshotId, snapshot.LegCount, snapshot.ScenarioCount);
+        }
+
+        return Ok(ResponseMapper.ToSnapshotInfo(snapshot));
+    }
+
     [HttpPost("activate/{snapshotId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

@@ -1,4 +1,5 @@
 using BetBuilder.Domain;
+using BetBuilder.Infrastructure.Binary;
 using BetBuilder.Infrastructure.Csv;
 using Microsoft.Extensions.Logging;
 
@@ -37,6 +38,22 @@ public sealed class PricingSnapshotFactory : IPricingSnapshotFactory
         var correlationData = !string.IsNullOrWhiteSpace(content.CorrelationMatrixCsv)
             ? CsvCorrelationMatrixReader.ParseFromContent(content.CorrelationMatrixCsv)
             : CsvCorrelationMatrixReader.Empty(outcomeData.Legs);
+
+        return Assemble(
+            content.SnapshotId,
+            content.EventId ?? "default",
+            content.ModelVersion ?? "1.0",
+            outcomeData, legProbData, correlationData);
+    }
+
+    public PricingSnapshot BuildFromBinary(SnapshotBinaryContent content)
+    {
+        _logger.LogInformation("Building snapshot {SnapshotId} from binary ({Scenarios} scenarios, {Legs} legs)...",
+            content.SnapshotId, content.ScenarioCount, content.Legs.Count);
+
+        var outcomeData = BinaryMatrixCodec.Unpack(content.Legs, content.PackedRows, content.ScenarioCount);
+        var legProbData = CsvLegProbReader.DeriveFromOutcomeMatrix(outcomeData);
+        var correlationData = CsvCorrelationMatrixReader.Empty(outcomeData.Legs);
 
         return Assemble(
             content.SnapshotId,

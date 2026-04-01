@@ -5,6 +5,11 @@
     <ProjectReference Include="..\BetBuilder.Infrastructure\BetBuilder.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.67.0" />
+    <Protobuf Include="Protos\snapshot.proto" GrpcServices="Server" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>

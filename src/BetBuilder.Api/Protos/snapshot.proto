@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+option csharp_namespace = "BetBuilder.Api.Grpc";
+
+package betbuilder;
+
+// Model runner opens a client-streaming call and pushes snapshots
+// as fast as they're generated. Server acknowledges each one.
+service SnapshotIngest {
+  rpc StreamSnapshots (stream BinarySnapshotMessage) returns (stream SnapshotAck);
+}
+
+message BinarySnapshotMessage {
+  string snapshot_id = 1;
+  repeated string legs = 2;
+
+  // Packed bitfield: each row is ceil(len(legs)/8) bytes,
+  // bit N of byte N/8 = leg N (1=hit, 0=miss).
+  bytes packed_rows = 3;
+  int32 scenario_count = 4;
+
+  string event_id = 5;
+  string model_version = 6;
+  bool activate = 7;
+}
+
+message SnapshotAck {
+  string snapshot_id = 1;
+  int32 leg_count = 2;
+  int32 scenario_count = 3;
+  bool activated = 4;
+  string error = 5;
+}
