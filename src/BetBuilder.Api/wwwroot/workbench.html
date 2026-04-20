@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bet Builder Workbench</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@700&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-2: #1c2128;
+    --border: #30363d;
+    --border-bright: #484f58;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #00dc82;
+    --blue: #58a6ff;
+    --yellow: #f0c000;
+    --red: #f85149;
+    --purple: #bd93f9;
+    --pink: #ff79c6;
+
+    --cell-w: 60px;
+    --cell-h: 50px;
+    --gap: 6px;
+    --cols: 20;
+    --rows: 16;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* Themed scrollbars */
+  * { scrollbar-width: thin; scrollbar-color: var(--border-bright) transparent; }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+  }
+  *::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--border-bright), var(--border));
+    border: 2px solid var(--surface);
+    border-radius: 10px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--accent), #008f55);
+  }
+  *::-webkit-scrollbar-corner { background: var(--surface); }
+
+  .shell {
+    display: flex; flex-direction: column; height: 100vh;
+  }
+
+  /* TOP BAR */
+  .top {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0;
+  }
+  .top h1 {
+    font-family: 'Space Mono', monospace; font-size: 14px; letter-spacing: -0.3px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-right: auto;
+  }
+  .top .sub {
+    font-size: 10px; color: var(--text-dim); margin-left: -4px;
+    font-family: 'Space Mono', monospace;
+  }
+  .btn {
+    font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+    padding: 6px 12px; border-radius: 8px; cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--border-bright); }
+  .btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .btn.primary:hover { filter: brightness(1.1); }
+  .btn.ghost { background: transparent; }
+  .btn.danger:hover { color: var(--red); border-color: var(--red); }
+
+  .top .id-field {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 4px 10px;
+  }
+  .top .id-field label {
+    font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px;
+  }
+  .top .id-field input {
+    background: transparent; border: none; color: var(--text);
+    font-family: 'Space Mono', monospace; font-size: 11px; outline: none; width: 100px;
+  }
+
+  /* STAGE WRAPPER */
+  .stage-wrap {
+    flex: 1; display: flex; overflow: hidden;
+  }
+
+  /* MODULE LIBRARY (LEFT RAIL) */
+  .rail {
+    width: 180px; flex-shrink: 0;
+    background: var(--surface); border-right: 1px solid var(--border);
+    padding: 10px; overflow-y: auto;
+  }
+  .rail h3 {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-dim); margin: 4px 0 8px;
+  }
+  .lib-item {
+    padding: 10px; border-radius: 10px; cursor: grab; margin-bottom: 8px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    transition: all 0.15s;
+    position: relative;
+  }
+  .lib-item:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .lib-item:active { cursor: grabbing; }
+  .lib-item .lib-title {
+    font-size: 12px; font-weight: 700; color: var(--text);
+  }
+  .lib-item .lib-kind {
+    font-family: 'Space Mono', monospace; font-size: 9px; color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .lib-item .lib-swatch {
+    position: absolute; top: 10px; right: 10px;
+    width: 8px; height: 8px; border-radius: 2px;
+    box-shadow: 0 0 10px currentColor;
+  }
+  .lib-item.main   .lib-swatch { background: var(--blue); color: var(--blue); }
+  .lib-item.stats  .lib-swatch { background: var(--yellow); color: var(--yellow); }
+  .lib-item.bingo  .lib-swatch { background: var(--accent); color: var(--accent); }
+  .lib-hint {
+    font-size: 10px; color: var(--text-dim); line-height: 1.4;
+    padding: 10px; margin-top: 10px; border-top: 1px dashed var(--border);
+  }
+  .lib-hint code {
+    font-family: 'Space Mono', monospace;
+    background: var(--surface-2); padding: 1px 5px; border-radius: 3px;
+    color: var(--accent);
+  }
+
+  /* STAGE */
+  .stage {
+    flex: 1; overflow: hidden; position: relative;
+    background: var(--bg);
+    padding: 8px;
+    display: flex;
+  }
+  .grid {
+    position: relative;
+    flex: 1;
+    padding: var(--gap);
+    background-image:
+      linear-gradient(to right,  rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: calc(var(--cell-w) + var(--gap)) calc(var(--cell-h) + var(--gap));
+    background-position: var(--gap) var(--gap);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  /* DROP GHOST */
+  .drop-ghost {
+    position: absolute;
+    background: rgba(0, 220, 130, 0.1);
+    border: 2px dashed var(--accent);
+    border-radius: 10px;
+    pointer-events: none;
+    transition: all 0.08s cubic-bezier(.22,.61,.36,1);
+    display: none;
+    z-index: 1;
+  }
+  .drop-ghost.invalid {
+    background: rgba(248, 81, 73, 0.1);
+    border-color: var(--red);
+  }
+  .drop-ghost.show { display: block; }
+
+  /* MODULES */
+  .module {
+    position: absolute;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    transition: box-shadow 0.15s, border-color 0.15s;
+    box-shadow: 0 4px 20px -6px rgba(0,0,0,0.5);
+  }
+  .module.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent), 0 10px 40px -8px rgba(0,220,130,0.3);
+    z-index: 10;
+  }
+  .module.dragging {
+    opacity: 0.75;
+    transition: none;
+    z-index: 50;
+    cursor: grabbing;
+  }
+  .module.resizing {
+    transition: none; z-index: 50;
+  }
+  .module .m-header {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 10px; border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    cursor: grab;
+    flex-shrink: 0;
+    min-height: 28px;
+  }
+  .module.dragging .m-header { cursor: grabbing; }
+  .m-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    box-shadow: 0 0 6px currentColor;
+  }
+  .module.main  .m-dot { background: var(--blue);  color: var(--blue); }
+  .module.stats .m-dot { background: var(--yellow); color: var(--yellow); }
+  .module.bingo .m-dot { background: var(--accent); color: var(--accent); }
+  .m-title {
+    font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.8px;
+    color: var(--text); flex: 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .m-title .m-id {
+    color: var(--text-dim); margin-left: 6px; font-size: 9px;
+  }
+  .m-actions { display: flex; gap: 4px; }
+  .m-btn {
+    background: transparent; border: 1px solid transparent; color: var(--text-dim);
+    width: 20px; height: 20px; border-radius: 4px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-family: 'Space Mono', monospace;
+    transition: all 0.15s;
+  }
+  .m-btn:hover { color: var(--text); background: var(--bg); border-color: var(--border); }
+  .m-btn.close:hover { color: var(--red); border-color: var(--red); }
+
+  .m-body {
+    flex: 1; position: relative; background: var(--bg);
+  }
+  .m-body iframe {
+    width: 100%; height: 100%; border: none; display: block; background: var(--bg);
+  }
+  /* Invisible pass-through overlay used during drag/resize so iframes don't eat events */
+  .m-shield {
+    position: absolute; inset: 0; display: none;
+    background: transparent;
+  }
+  .shielding .m-shield { display: block; }
+
+  .m-resize {
+    position: absolute; right: 2px; bottom: 2px;
+    width: 14px; height: 14px; cursor: nwse-resize;
+    border-right: 2px solid var(--text-dim);
+    border-bottom: 2px solid var(--text-dim);
+    border-bottom-right-radius: 4px;
+    opacity: 0.4;
+    z-index: 3;
+  }
+  .module:hover .m-resize { opacity: 0.85; }
+  .module.selected .m-resize { border-color: var(--accent); opacity: 1; }
+
+  /* DRAG-FROM-RAIL GHOST */
+  .rail-ghost {
+    position: fixed; pointer-events: none; z-index: 2000;
+    padding: 8px 12px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--accent);
+    color: var(--accent); font-family: 'Space Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    box-shadow: 0 10px 30px -10px rgba(0,0,0,0.8);
+    transform: translate(10px, 10px);
+    display: none;
+  }
+  .rail-ghost.show { display: block; }
+
+  /* STATUS BAR */
+  .status-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 6px 14px; border-top: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0; font-size: 10px; color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+  }
+  .status-bar .pill {
+    padding: 2px 8px; border-radius: 10px;
+    background: var(--surface-2); border: 1px solid var(--border);
+  }
+  .status-bar .pill.live { color: var(--accent); border-color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="top">
+    <h1>BETBUILDER WORKBENCH</h1>
+    <span class="sub">grid . drag . snap . build</span>
+
+    <div class="id-field">
+      <label>userId</label>
+      <input id="userIdInput" type="text" value="demo_user_1" spellcheck="false">
+    </div>
+    <div class="id-field">
+      <label>fightId</label>
+      <input id="fightIdInput" type="text" value="default" spellcheck="false">
+    </div>
+
+    <button class="btn ghost" id="reloadAllBtn">RELOAD</button>
+    <button class="btn ghost" id="tidyBtn">TIDY</button>
+    <button class="btn ghost" id="resetBtn">RESET</button>
+    <button class="btn primary" id="saveBtn">SAVE LAYOUT</button>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="rail">
+      <h3>Module Library</h3>
+      <div class="lib-item main"  draggable="true" data-kind="main">
+        <span class="lib-swatch"></span>
+        <div class="lib-title">Main App</div>
+        <div class="lib-kind">index.html</div>
+      </div>
+      <div class="lib-item stats" draggable="true" data-kind="stats">
+        <span class="lib-swatch"></span>
+        <div class="lib-title">Live Stats</div>
+        <div class="lib-kind">stats.html</div>
+      </div>
+      <div class="lib-item bingo" draggable="true" data-kind="bingo">
+        <span class="lib-swatch"></span>
+        <div class="lib-title">Bingo Cards</div>
+        <div class="lib-kind">bingo.html</div>
+      </div>
+
+      <div class="lib-hint">
+        Drag a module from the library onto the grid, or click to drop it at the next free slot.
+        <br><br>
+        <strong>Move:</strong> drag the header.<br>
+        <strong>Resize:</strong> drag bottom-right.<br>
+        <strong>Select:</strong> click. Arrows to nudge, <code>Del</code> to remove.<br>
+        <strong>Duplicate:</strong> <code>Ctrl+D</code> on a selected module.
+      </div>
+    </div>
+
+    <div class="stage" id="stage">
+      <div class="grid" id="grid">
+        <div class="drop-ghost" id="dropGhost"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <span class="pill" id="countPill">0 modules</span>
+    <span class="pill" id="selPill">none selected</span>
+    <span style="margin-left:auto;">
+      <span id="hintText">Tip: drop a module from the left rail to begin.</span>
+    </span>
+  </div>
+</div>
+
+<div class="rail-ghost" id="railGhost">+ module</div>
+
+<script>
+(function() {
+  const STORAGE_KEY = 'bb.workbench.layout.v1';
+  const COLS = 20;
+  const ROWS = 16;
+  const MIN_W = 3;
+  const MIN_H = 4;
+
+  const MODULE_DEFS = {
+    main:  { title: 'MAIN APP',   path: '/',            defaultW: 6, defaultH: 12, acceptsUser: true, acceptsFight: true },
+    stats: { title: 'LIVE STATS', path: '/stats.html',  defaultW: 6, defaultH: 10, acceptsUser: true, acceptsFight: true },
+    bingo: { title: 'BINGO CARDS',path: '/bingo.html',  defaultW: 7, defaultH: 12, acceptsUser: true, acceptsFight: true }
+  };
+
+  const api = window.location.origin;
+  const grid = document.getElementById('grid');
+  const stage = document.getElementById('stage');
+  const dropGhost = document.getElementById('dropGhost');
+  const railGhost = document.getElementById('railGhost');
+  const userInput = document.getElementById('userIdInput');
+  const fightInput = document.getElementById('fightIdInput');
+  const countPill = document.getElementById('countPill');
+  const selPill = document.getElementById('selPill');
+  const hintText = document.getElementById('hintText');
+
+  const state = {
+    modules: new Map(),
+    nextId: 1,
+    selected: null
+  };
+
+  // ---- helpers ----------------------------------------------------------
+  function cellSize() {
+    const cs = getComputedStyle(document.documentElement);
+    return {
+      w: parseFloat(cs.getPropertyValue('--cell-w')),
+      h: parseFloat(cs.getPropertyValue('--cell-h')),
+      gap: parseFloat(cs.getPropertyValue('--gap'))
+    };
+  }
+
+  function fitGridToViewport() {
+    // Compute cell-w/h so that exactly COLS x ROWS fills the available stage.
+    const rect = grid.getBoundingClientRect();
+    const cs = getComputedStyle(document.documentElement);
+    const gap = parseFloat(cs.getPropertyValue('--gap'));
+
+    // grid has padding:gap on all sides, so usable inner = rect - 2*gap
+    const innerW = rect.width - 2 * gap;
+    const innerH = rect.height - 2 * gap;
+
+    // COLS cells + (COLS - 1) gaps must equal innerW  =>
+    // cellW = (innerW - (COLS - 1) * gap) / COLS
+    const cw = Math.max(24, Math.floor((innerW - (COLS - 1) * gap) / COLS));
+    const ch = Math.max(24, Math.floor((innerH - (ROWS - 1) * gap) / ROWS));
+
+    document.documentElement.style.setProperty('--cell-w', cw + 'px');
+    document.documentElement.style.setProperty('--cell-h', ch + 'px');
+
+    for (const m of state.modules.values()) applyPosition(m);
+  }
+
+  function urlFor(kind) {
+    const def = MODULE_DEFS[kind];
+    const userId = userInput.value.trim() || 'demo_user_1';
+    const fightId = fightInput.value.trim() || 'default';
+    const qs = [];
+    if (def.acceptsUser) qs.push('userId=' + encodeURIComponent(userId));
+    if (def.acceptsFight) qs.push('fightId=' + encodeURIComponent(fightId));
+    return api + def.path + (qs.length ? '?' + qs.join('&') : '');
+  }
+
+  function firstFreeSpot(w, h) {
+    for (let y = 0; y + h <= ROWS; y++) {
+      for (let x = 0; x + w <= COLS; x++) {
+        if (!anyOverlap(x, y, w, h, null)) return { x, y };
+      }
+    }
+    return { x: 0, y: 0 };
+  }
+
+  function anyOverlap(x, y, w, h, ignoreId) {
+    for (const m of state.modules.values()) {
+      if (ignoreId && m.id === ignoreId) continue;
+      if (x < m.x + m.w && x + w > m.x && y < m.y + m.h && y + h > m.y) return true;
+    }
+    return false;
+  }
+
+  function applyPosition(m) {
+    const { w: cw, h: ch, gap } = cellSize();
+    const left = m.x * (cw + gap) + gap;
+    const top  = m.y * (ch + gap) + gap;
+    const width  = m.w * cw + (m.w - 1) * gap;
+    const height = m.h * ch + (m.h - 1) * gap;
+    m.el.style.left = left + 'px';
+    m.el.style.top = top + 'px';
+    m.el.style.width = width + 'px';
+    m.el.style.height = height + 'px';
+  }
+
+  function showGhost(x, y, w, h, valid) {
+    const { w: cw, h: ch, gap } = cellSize();
+    dropGhost.style.left = (x * (cw + gap) + gap) + 'px';
+    dropGhost.style.top  = (y * (ch + gap) + gap) + 'px';
+    dropGhost.style.width  = (w * cw + (w - 1) * gap) + 'px';
+    dropGhost.style.height = (h * ch + (h - 1) * gap) + 'px';
+    dropGhost.classList.add('show');
+    dropGhost.classList.toggle('invalid', !valid);
+  }
+  function hideGhost() { dropGhost.classList.remove('show'); }
+
+  function updateStatus() {
+    countPill.textContent = state.modules.size + ' module' + (state.modules.size === 1 ? '' : 's');
+    if (state.selected) {
+      const m = state.modules.get(state.selected);
+      if (m) selPill.textContent = '#' + m.id + ' ' + m.kind + ' [' + m.x + ',' + m.y + ' ' + m.w + 'x' + m.h + ']';
+    } else selPill.textContent = 'none selected';
+  }
+
+  function select(id) {
+    if (state.selected) {
+      const prev = state.modules.get(state.selected);
+      if (prev) prev.el.classList.remove('selected');
+    }
+    state.selected = id;
+    if (id) {
+      const m = state.modules.get(id);
+      if (m) m.el.classList.add('selected');
+    }
+    updateStatus();
+  }
+
+  // ---- module lifecycle -------------------------------------------------
+  function createModule(kind, x, y, w, h, id) {
+    const def = MODULE_DEFS[kind];
+    if (!def) return null;
+
+    const mid = id != null ? id : state.nextId++;
+    if (id != null && id >= state.nextId) state.nextId = id + 1;
+
+    const el = document.createElement('div');
+    el.className = 'module ' + kind;
+    el.innerHTML = '' +
+      '<div class="m-header">' +
+        '<span class="m-dot"></span>' +
+        '<span class="m-title">' + def.title + '<span class="m-id">#' + mid + '</span></span>' +
+        '<div class="m-actions">' +
+          '<button class="m-btn" data-act="reload" title="Reload">r</button>' +
+          '<button class="m-btn" data-act="open"   title="Open in new tab">^</button>' +
+          '<button class="m-btn close" data-act="close" title="Remove">x</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="m-body">' +
+        '<iframe src="' + urlFor(kind) + '" loading="lazy"></iframe>' +
+        '<div class="m-shield"></div>' +
+      '</div>' +
+      '<div class="m-resize" title="Resize"></div>';
+
+    grid.appendChild(el);
+    const m = { id: mid, kind, x, y, w, h, el };
+    state.modules.set(mid, m);
+    applyPosition(m);
+
+    attachModuleInteractions(m);
+    updateStatus();
+    select(mid);
+    return m;
+  }
+
+  function removeModule(id) {
+    const m = state.modules.get(id);
+    if (!m) return;
+    m.el.remove();
+    state.modules.delete(id);
+    if (state.selected === id) select(null);
+    updateStatus();
+  }
+
+  function reloadModule(id) {
+    const m = state.modules.get(id);
+    if (!m) return;
+    const iframe = m.el.querySelector('iframe');
+    iframe.src = urlFor(m.kind);
+  }
+
+  function attachModuleInteractions(m) {
+    const header = m.el.querySelector('.m-header');
+    const resize = m.el.querySelector('.m-resize');
+    const actions = m.el.querySelectorAll('.m-btn');
+
+    m.el.addEventListener('mousedown', () => select(m.id));
+
+    actions.forEach(btn => {
+      btn.addEventListener('mousedown', e => e.stopPropagation());
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const act = btn.dataset.act;
+        if (act === 'reload') reloadModule(m.id);
+        if (act === 'open') window.open(urlFor(m.kind), '_blank');
+        if (act === 'close') removeModule(m.id);
+      });
+    });
+
+    // DRAG (move)
+    header.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      if (e.target.closest('.m-btn')) return;
+      startDrag(m, e);
+    });
+
+    // RESIZE
+    resize.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      e.stopPropagation();
+      startResize(m, e);
+    });
+  }
+
+  // ---- dragging existing module ----------------------------------------
+  function startDrag(m, ev) {
+    ev.preventDefault();
+    select(m.id);
+    const startRect = m.el.getBoundingClientRect();
+    const gridRect = grid.getBoundingClientRect();
+    const offsetX = ev.clientX - startRect.left;
+    const offsetY = ev.clientY - startRect.top;
+    const origX = m.x, origY = m.y;
+
+    m.el.classList.add('dragging');
+    document.body.classList.add('shielding');
+
+    function onMove(e) {
+      const relX = e.clientX - gridRect.left - offsetX;
+      const relY = e.clientY - gridRect.top - offsetY;
+      const { w: cw, h: ch, gap } = cellSize();
+      let cx = Math.round((relX - gap) / (cw + gap));
+      let cy = Math.round((relY - gap) / (ch + gap));
+      cx = Math.max(0, Math.min(COLS - m.w, cx));
+      cy = Math.max(0, Math.min(ROWS - m.h, cy));
+      m.el.style.left = (cx * (cw + gap) + gap) + 'px';
+      m.el.style.top  = (cy * (ch + gap) + gap) + 'px';
+
+      const valid = !anyOverlap(cx, cy, m.w, m.h, m.id);
+      showGhost(cx, cy, m.w, m.h, valid);
+      m._pendingX = cx; m._pendingY = cy; m._pendingValid = valid;
+    }
+
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      m.el.classList.remove('dragging');
+      document.body.classList.remove('shielding');
+      hideGhost();
+
+      if (m._pendingValid && m._pendingX != null) {
+        m.x = m._pendingX;
+        m.y = m._pendingY;
+      } else {
+        m.x = origX; m.y = origY;
+      }
+      applyPosition(m);
+      updateStatus();
+      delete m._pendingX; delete m._pendingY; delete m._pendingValid;
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+
+  function startResize(m, ev) {
+    ev.preventDefault();
+    select(m.id);
+    const gridRect = grid.getBoundingClientRect();
+    const origW = m.w, origH = m.h;
+
+    m.el.classList.add('resizing');
+    document.body.classList.add('shielding');
+
+    function onMove(e) {
+      const { w: cw, h: ch, gap } = cellSize();
+      const rightPx = e.clientX - gridRect.left - gap - m.x * (cw + gap);
+      const bottomPx = e.clientY - gridRect.top - gap - m.y * (ch + gap);
+      let w = Math.round((rightPx + gap) / (cw + gap));
+      let h = Math.round((bottomPx + gap) / (ch + gap));
+      w = Math.max(MIN_W, Math.min(COLS - m.x, w));
+      h = Math.max(MIN_H, Math.min(ROWS - m.y, h));
+      m.el.style.width  = (w * cw + (w - 1) * gap) + 'px';
+      m.el.style.height = (h * ch + (h - 1) * gap) + 'px';
+
+      const valid = !anyOverlap(m.x, m.y, w, h, m.id);
+      showGhost(m.x, m.y, w, h, valid);
+      m._pendingW = w; m._pendingH = h; m._pendingValid = valid;
+    }
+
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      m.el.classList.remove('resizing');
+      document.body.classList.remove('shielding');
+      hideGhost();
+      if (m._pendingValid && m._pendingW != null) {
+        m.w = m._pendingW; m.h = m._pendingH;
+      } else {
+        m.w = origW; m.h = origH;
+      }
+      applyPosition(m);
+      updateStatus();
+      delete m._pendingW; delete m._pendingH; delete m._pendingValid;
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+
+  // ---- dragging from rail ----------------------------------------------
+  let railDrag = null;
+  document.querySelectorAll('.lib-item').forEach(item => {
+    const kind = item.dataset.kind;
+
+    // native HTML5 drag provides nice ghost but we'll use pointer events for unified UX
+    item.addEventListener('dragstart', e => e.preventDefault());
+
+    item.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      railDrag = {
+        kind,
+        moved: false,
+        startX: e.clientX,
+        startY: e.clientY
+      };
+      const onMove = ev => {
+        if (!railDrag) return;
+        if (!railDrag.moved) {
+          const dx = ev.clientX - railDrag.startX;
+          const dy = ev.clientY - railDrag.startY;
+          if (Math.hypot(dx, dy) < 4) return;
+          railDrag.moved = true;
+          railGhost.classList.add('show');
+          railGhost.textContent = '+ ' + MODULE_DEFS[kind].title;
+          document.body.classList.add('shielding');
+        }
+        railGhost.style.left = ev.clientX + 'px';
+        railGhost.style.top = ev.clientY + 'px';
+
+        const gridRect = grid.getBoundingClientRect();
+        if (ev.clientX >= gridRect.left && ev.clientY >= gridRect.top &&
+            ev.clientX <= gridRect.right && ev.clientY <= gridRect.bottom) {
+          const { w: cw, h: ch, gap } = cellSize();
+          const def = MODULE_DEFS[kind];
+          const cx = Math.max(0, Math.min(COLS - def.defaultW,
+            Math.round((ev.clientX - gridRect.left - gap) / (cw + gap))));
+          const cy = Math.max(0, Math.min(ROWS - def.defaultH,
+            Math.round((ev.clientY - gridRect.top - gap) / (ch + gap))));
+          const valid = !anyOverlap(cx, cy, def.defaultW, def.defaultH, null);
+          showGhost(cx, cy, def.defaultW, def.defaultH, valid);
+          railDrag.target = { x: cx, y: cy, valid };
+        } else {
+          hideGhost();
+          railDrag.target = null;
+        }
+      };
+      const onUp = ev => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        railGhost.classList.remove('show');
+        document.body.classList.remove('shielding');
+        hideGhost();
+
+        const def = MODULE_DEFS[kind];
+        if (!railDrag.moved) {
+          // Click-only: drop at first free slot
+          const spot = firstFreeSpot(def.defaultW, def.defaultH);
+          createModule(kind, spot.x, spot.y, def.defaultW, def.defaultH);
+        } else if (railDrag.target && railDrag.target.valid) {
+          createModule(kind, railDrag.target.x, railDrag.target.y, def.defaultW, def.defaultH);
+        } else if (railDrag.target) {
+          // Invalid slot -> fall back to first free
+          const spot = firstFreeSpot(def.defaultW, def.defaultH);
+          createModule(kind, spot.x, spot.y, def.defaultW, def.defaultH);
+        }
+        railDrag = null;
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+
+  // ---- keyboard ---------------------------------------------------------
+  document.addEventListener('keydown', e => {
+    if (['INPUT','TEXTAREA'].includes((e.target && e.target.tagName) || '')) return;
+    if (!state.selected) return;
+    const m = state.modules.get(state.selected);
+    if (!m) return;
+
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      removeModule(m.id); e.preventDefault(); return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+      const spot = firstFreeSpot(m.w, m.h);
+      createModule(m.kind, spot.x, spot.y, m.w, m.h);
+      e.preventDefault(); return;
+    }
+
+    let dx = 0, dy = 0;
+    if (e.key === 'ArrowLeft') dx = -1;
+    if (e.key === 'ArrowRight') dx = 1;
+    if (e.key === 'ArrowUp') dy = -1;
+    if (e.key === 'ArrowDown') dy = 1;
+    if (dx || dy) {
+      const nx = Math.max(0, Math.min(COLS - m.w, m.x + dx));
+      const ny = Math.max(0, Math.min(ROWS - m.h, m.y + dy));
+      if (!anyOverlap(nx, ny, m.w, m.h, m.id)) {
+        m.x = nx; m.y = ny; applyPosition(m); updateStatus();
+      }
+      e.preventDefault();
+    }
+  });
+
+  stage.addEventListener('mousedown', e => {
+    if (e.target === stage || e.target === grid) select(null);
+  });
+
+  // ---- toolbar actions --------------------------------------------------
+  document.getElementById('reloadAllBtn').addEventListener('click', () => {
+    for (const m of state.modules.values()) reloadModule(m.id);
+    hintText.textContent = 'Reloaded ' + state.modules.size + ' module(s).';
+  });
+
+  document.getElementById('tidyBtn').addEventListener('click', () => {
+    const mods = Array.from(state.modules.values())
+      .sort((a, b) => (a.kind > b.kind ? 1 : -1));
+    // Clear positions then re-pack
+    for (const m of mods) { m.x = -99; m.y = -99; }
+    for (const m of mods) {
+      const spot = firstFreeSpot(m.w, m.h);
+      m.x = spot.x; m.y = spot.y;
+      applyPosition(m);
+    }
+    hintText.textContent = 'Tidied layout.';
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if (!confirm('Remove all modules from the workbench?')) return;
+    for (const id of Array.from(state.modules.keys())) removeModule(id);
+    localStorage.removeItem(STORAGE_KEY);
+    hintText.textContent = 'Workbench cleared.';
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    saveLayout();
+    hintText.textContent = 'Layout saved to this browser.';
+  });
+
+  [userInput, fightInput].forEach(inp => {
+    inp.addEventListener('change', () => {
+      for (const m of state.modules.values()) reloadModule(m.id);
+    });
+  });
+
+  // ---- persistence ------------------------------------------------------
+  function serialize() {
+    return {
+      userId: userInput.value,
+      fightId: fightInput.value,
+      modules: Array.from(state.modules.values()).map(m => ({
+        id: m.id, kind: m.kind, x: m.x, y: m.y, w: m.w, h: m.h
+      }))
+    };
+  }
+
+  function saveLayout() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(serialize())); }
+    catch (err) { console.warn('Save failed', err); }
+  }
+
+  function loadLayout() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      if (data.userId) userInput.value = data.userId;
+      if (data.fightId) fightInput.value = data.fightId;
+      for (const mod of (data.modules || [])) {
+        createModule(mod.kind, mod.x, mod.y, mod.w, mod.h, mod.id);
+      }
+      select(null);
+      return (data.modules || []).length > 0;
+    } catch (err) { console.warn('Load failed', err); return false; }
+  }
+
+  // Auto-save periodically
+  setInterval(saveLayout, 3000);
+  window.addEventListener('beforeunload', saveLayout);
+
+  // ---- bootstrap --------------------------------------------------------
+  // Size cells to fill the stage before we place any modules so initial
+  // positions are correct.
+  fitGridToViewport();
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(fitGridToViewport, 80);
+  });
+
+  const qsParams = new URLSearchParams(window.location.search);
+  const qsUser = qsParams.get('userId');
+  const qsFight = qsParams.get('fightId');
+
+  const hadLayout = loadLayout();
+  if (qsUser) userInput.value = qsUser;
+  if (qsFight) fightInput.value = qsFight;
+  if ((qsUser || qsFight) && hadLayout) {
+    // Propagate URL-provided IDs into the restored modules.
+    for (const m of state.modules.values()) reloadModule(m.id);
+  }
+  if (!hadLayout) {
+    // Default starter layout
+    createModule('main',  0, 0, 6, 12);
+    createModule('stats', 6, 0, 6, 10);
+    createModule('bingo', 12, 0, 7, 12);
+    select(null);
+    hintText.textContent = 'Starter layout loaded. Drag headers to move, corner handle to resize.';
+  } else {
+    hintText.textContent = 'Layout restored from the last session.';
+  }
+})();
+</script>
+</body>
+</html>

@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: betbuilder
       POSTGRES_DB: betbuilder
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -17,12 +17,15 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./data:/app/data:ro
+      # data/ is already baked into the image via Dockerfile; skip bind-mount
+      # to avoid macOS Docker Desktop file-share permission issues.
       - ./Mock-data:/app/mock-data:ro
+      - ./Mock-stats:/app/mock-stats:ro
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - Data__DataDirectory=/app/data
       - Simulation__MockDataDirectory=/app/mock-data
+      - Stats__MockDataDirectory=/app/mock-stats
       - Data__DefaultSnapshot=ts0
       - Pricing__BaseMarginPercent=5.0
       - Pricing__MarginScaleFactor=7.5

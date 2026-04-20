@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Fight Stats</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@700&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-2: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #00dc82;
+    --red: #f85149;
+    --blue: #58a6ff;
+    --yellow: #f0c000;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .app { max-width: 480px; margin: 0 auto; padding: 16px; }
+
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; border-bottom: 1px solid var(--border); margin-bottom: 12px;
+  }
+  .header h1 {
+    font-family: 'Space Mono', monospace; font-size: 16px; letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--accent), var(--blue));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .conn {
+    font-size: 10px; color: var(--text-dim);
+    padding: 4px 10px; border-radius: 20px;
+    background: var(--surface-2); border: 1px solid var(--border);
+  }
+  .conn .dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-dim); margin-right: 6px;
+  }
+  .conn.live .dot { background: var(--accent); animation: pulse 1.6s infinite; }
+  .conn.down .dot { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .clock-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px; text-align: center; margin-bottom: 14px;
+    background-image: radial-gradient(circle at 50% 0%, rgba(88,166,255,0.09), transparent 70%);
+  }
+  .clock {
+    font-family: 'Space Mono', monospace; font-size: 36px; font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .clock-sub { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+  .fight-id { font-size: 10px; color: var(--text-dim); margin-top: 8px; font-family: 'Space Mono', monospace; }
+
+  .fighters {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
+  }
+  .fighter {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px;
+  }
+  .fighter.red   { border-top: 3px solid var(--red); }
+  .fighter.blue  { border-top: 3px solid var(--blue); }
+  .fighter h3 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--text-dim); margin-bottom: 8px; font-weight: 600;
+  }
+  .health-bar {
+    height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden;
+    margin-bottom: 10px; border: 1px solid var(--border);
+  }
+  .health-fill {
+    height: 100%; width: 100%;
+    background: linear-gradient(90deg, var(--red), #ff8787);
+    transition: width 0.6s cubic-bezier(.22,.61,.36,1);
+  }
+  .blue .health-fill { background: linear-gradient(90deg, var(--blue), #9ecbff); }
+  .fighter-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .metric {
+    background: var(--surface-2); border-radius: 6px; padding: 6px 8px;
+    border: 1px solid var(--border);
+  }
+  .metric-label { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric-value {
+    font-family: 'Space Mono', monospace; font-size: 15px; font-weight: 700;
+    margin-top: 2px;
+  }
+  .red  .metric-value { color: #ff8787; }
+  .blue .metric-value { color: #9ecbff; }
+
+  .section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px; margin-bottom: 12px;
+  }
+  .section h3 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--text-dim); font-weight: 600; margin-bottom: 10px;
+  }
+  .momentum-canvas {
+    width: 100%; height: 80px; display: block;
+    background: var(--surface-2); border-radius: 8px; border: 1px solid var(--border);
+  }
+
+  .legs { display: flex; flex-direction: column; gap: 6px; }
+  .leg-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; background: var(--surface-2); border-radius: 8px;
+    border: 1px solid var(--border); font-size: 12px;
+    transition: all 0.4s ease;
+  }
+  .leg-row .label { font-weight: 500; }
+  .leg-row .outcome { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.6px; }
+  .leg-row.won { border-color: var(--accent); background: rgba(0,220,130,0.08); }
+  .leg-row.won .outcome { color: var(--accent); }
+  .leg-row.lost { border-color: var(--red); background: rgba(248,81,73,0.08); opacity: 0.75; }
+  .leg-row.lost .outcome { color: var(--red); }
+  .leg-row.void { border-color: var(--yellow); background: rgba(240,192,0,0.08); }
+  .leg-row.void .outcome { color: var(--yellow); }
+
+  .other-metrics {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  }
+  .mini-metric {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px;
+  }
+  .mini-metric .label { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .mini-metric .val {
+    font-family: 'Space Mono', monospace; font-size: 14px; font-weight: 700;
+    margin-top: 2px; color: var(--text);
+  }
+
+  .empty {
+    text-align: center; color: var(--text-dim); font-size: 12px; padding: 30px 10px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1 id="title">LIVE STATS</h1>
+    <span id="conn" class="conn"><span class="dot"></span><span id="conn-label">connecting</span></span>
+  </div>
+
+  <div class="clock-card">
+    <div class="clock" id="clock">0:00</div>
+    <div class="clock-sub" id="clock-sub">Fight clock</div>
+    <div class="fight-id" id="fight-id">fight: -</div>
+  </div>
+
+  <div class="fighters">
+    <div class="fighter red">
+      <h3 id="red-name">Red Corner</h3>
+      <div class="health-bar"><div class="health-fill" id="red-health"></div></div>
+      <div class="fighter-metrics" id="red-metrics"></div>
+    </div>
+    <div class="fighter blue">
+      <h3 id="blue-name">Blue Corner</h3>
+      <div class="health-bar"><div class="health-fill" id="blue-health"></div></div>
+      <div class="fighter-metrics" id="blue-metrics"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Momentum</h3>
+    <canvas id="momentum" class="momentum-canvas" width="460" height="80"></canvas>
+  </div>
+
+  <div class="section" id="legs-section" style="display:none;">
+    <h3>Leg Results</h3>
+    <div class="legs" id="legs"></div>
+  </div>
+
+  <div class="section" id="other-section" style="display:none;">
+    <h3>Other Metrics</h3>
+    <div class="other-metrics" id="other"></div>
+  </div>
+
+  <div class="empty" id="empty">Waiting for the fight to start...</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+<script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const fightId = params.get('fightId') || params.get('eventId') || 'default';
+  const API = window.location.origin;
+
+  document.getElementById('fight-id').textContent = 'fight: ' + fightId;
+
+  const redHealthEl = document.getElementById('red-health');
+  const blueHealthEl = document.getElementById('blue-health');
+  const redMetricsEl = document.getElementById('red-metrics');
+  const blueMetricsEl = document.getElementById('blue-metrics');
+  const otherEl = document.getElementById('other');
+  const otherSection = document.getElementById('other-section');
+  const legsSection = document.getElementById('legs-section');
+  const legsEl = document.getElementById('legs');
+  const emptyEl = document.getElementById('empty');
+  const clockEl = document.getElementById('clock');
+  const clockSubEl = document.getElementById('clock-sub');
+  const connEl = document.getElementById('conn');
+  const connLabel = document.getElementById('conn-label');
+
+  // Momentum history (simple rolling buffer of red_health - blue_health).
+  const momentumCanvas = document.getElementById('momentum');
+  const mctx = momentumCanvas.getContext('2d');
+  const history = [];
+  const MAX_HISTORY = 80;
+
+  function setConn(state) {
+    connEl.classList.remove('live', 'down');
+    if (state === 'live') { connEl.classList.add('live'); connLabel.textContent = 'live'; }
+    else if (state === 'down') { connEl.classList.add('down'); connLabel.textContent = 'reconnecting'; }
+    else { connLabel.textContent = 'connecting'; }
+  }
+
+  function formatClock(seconds) {
+    if (!Number.isFinite(seconds)) return '0:00';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return m + ':' + (s < 10 ? '0' + s : s);
+  }
+
+  function pickMetric(metrics, keys, fallback) {
+    for (const k of keys) {
+      const v = metrics[k];
+      if (typeof v === 'number' && isFinite(v)) return v;
+      const lower = Object.keys(metrics).find(x => x.toLowerCase() === k.toLowerCase());
+      if (lower != null && typeof metrics[lower] === 'number') return metrics[lower];
+    }
+    return fallback;
+  }
+
+  function renderFighter(prefix, containerHealth, containerMetrics, metrics, max) {
+    const health = pickMetric(metrics, [prefix + '_health', prefix + 'Health', prefix + '_hp'], null);
+    const strikes = pickMetric(metrics, [prefix + '_strikes', prefix + 'Strikes', prefix + '_strikes_landed'], null);
+    const accuracy = pickMetric(metrics, [prefix + '_accuracy', prefix + 'Accuracy'], null);
+    const takedowns = pickMetric(metrics, [prefix + '_takedowns', prefix + 'Takedowns'], null);
+    const damage = pickMetric(metrics, [prefix + '_damage', prefix + 'Damage'], null);
+
+    if (health != null) {
+      const clamped = Math.max(0, Math.min(1, health > 1 ? health / 100 : health));
+      containerHealth.style.width = (clamped * 100).toFixed(1) + '%';
+    }
+
+    const items = [];
+    if (strikes != null) items.push({ label: 'Strikes', val: Math.round(strikes) });
+    if (accuracy != null) items.push({ label: 'Acc %', val: Math.round(accuracy > 1 ? accuracy : accuracy * 100) });
+    if (takedowns != null) items.push({ label: 'Takedowns', val: Math.round(takedowns) });
+    if (damage != null) items.push({ label: 'Damage', val: Math.round(damage) });
+
+    containerMetrics.innerHTML = items.length
+      ? items.map(m => '<div class="metric"><div class="metric-label">' + m.label + '</div><div class="metric-value">' + m.val + '</div></div>').join('')
+      : '<div class="metric" style="grid-column:1/-1;"><div class="metric-label">waiting</div><div class="metric-value">-</div></div>';
+  }
+
+  function renderOther(metrics) {
+    const reserved = new Set();
+    for (const pref of ['red','blue']) {
+      for (const suf of ['_health','_strikes','_accuracy','_takedowns','_damage','_hp','Strikes','Accuracy','Takedowns','Damage','Health']) {
+        reserved.add(pref + suf);
+      }
+    }
+    const extras = Object.entries(metrics)
+      .filter(([k]) => !reserved.has(k) && k !== 'elapsed_seconds' && k !== 'round')
+      .slice(0, 8);
+
+    if (extras.length === 0) {
+      otherSection.style.display = 'none';
+      return;
+    }
+
+    otherSection.style.display = 'block';
+    otherEl.innerHTML = extras.map(([k, v]) => {
+      const label = k.replace(/_/g, ' ');
+      const val = Number.isFinite(v) ? (Math.abs(v) >= 1 ? v.toFixed(0) : v.toFixed(2)) : v;
+      return '<div class="mini-metric"><div class="label">' + label + '</div><div class="val">' + val + '</div></div>';
+    }).join('');
+  }
+
+  function pushMomentum(metrics) {
+    const r = pickMetric(metrics, ['red_health','redHealth','red_hp'], null);
+    const b = pickMetric(metrics, ['blue_health','blueHealth','blue_hp'], null);
+    if (r == null || b == null) return;
+    const rn = r > 1 ? r / 100 : r;
+    const bn = b > 1 ? b / 100 : b;
+    history.push(rn - bn);
+    while (history.length > MAX_HISTORY) history.shift();
+    drawMomentum();
+  }
+
+  function drawMomentum() {
+    const w = momentumCanvas.width;
+    const h = momentumCanvas.height;
+    mctx.clearRect(0, 0, w, h);
+    mctx.strokeStyle = 'rgba(139,148,158,0.2)';
+    mctx.beginPath();
+    mctx.moveTo(0, h / 2);
+    mctx.lineTo(w, h / 2);
+    mctx.stroke();
+
+    if (history.length < 2) return;
+    const step = w / (MAX_HISTORY - 1);
+    mctx.beginPath();
+    for (let i = 0; i < history.length; i++) {
+      const x = i * step;
+      const y = h / 2 - history[i] * (h / 2) * 0.9;
+      if (i === 0) mctx.moveTo(x, y);
+      else mctx.lineTo(x, y);
+    }
+    const last = history[history.length - 1];
+    mctx.strokeStyle = last >= 0 ? '#f85149' : '#58a6ff';
+    mctx.lineWidth = 2;
+    mctx.stroke();
+  }
+
+  const legRows = new Map();
+  function upsertLeg(leg, outcome) {
+    legsSection.style.display = 'block';
+    let row = legRows.get(leg);
+    if (!row) {
+      row = document.createElement('div');
+      row.className = 'leg-row';
+      row.innerHTML = '<span class="label"></span><span class="outcome">open</span>';
+      row.querySelector('.label').textContent = prettyLeg(leg);
+      legsEl.appendChild(row);
+      legRows.set(leg, row);
+    }
+    row.classList.remove('won', 'lost', 'void');
+    if (outcome) row.classList.add(outcome);
+    row.querySelector('.outcome').textContent = outcome || 'open';
+  }
+
+  function prettyLeg(leg) {
+    let s = leg.startsWith('bb_') ? leg.slice(3) : leg;
+    return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function applyStats(msg) {
+    emptyEl.style.display = 'none';
+    clockEl.textContent = formatClock(msg.elapsedSeconds);
+    clockSubEl.textContent = 'Fight clock - tick ' + (msg.snapshotId || '-');
+    const m = msg.metrics || {};
+    renderFighter('red', redHealthEl, redMetricsEl, m);
+    renderFighter('blue', blueHealthEl, blueMetricsEl, m);
+    renderOther(m);
+    pushMomentum(m);
+
+    const legResults = msg.legResults || {};
+    for (const [leg, v] of Object.entries(legResults)) {
+      const outcome = v > 0 ? 'won' : v < 0 ? 'void' : 'lost';
+      upsertLeg(leg, outcome);
+    }
+
+    window.parent && window.parent.postMessage({ type: 'STATS_UPDATE', fightId, stats: msg }, '*');
+  }
+
+  const connection = new signalR.HubConnectionBuilder()
+    .withUrl(API + '/hubs/fight')
+    .withAutomaticReconnect()
+    .build();
+
+  connection.on('statsUpdate', applyStats);
+  connection.on('legResolved', (msg) => {
+    const outcome = (msg.outcome || '').toLowerCase();
+    upsertLeg(msg.leg, outcome);
+    window.parent && window.parent.postMessage({ type: 'LEG_RESOLVED', ...msg }, '*');
+  });
+  connection.on('snapshotAdvanced', (msg) => {
+    clockEl.textContent = formatClock(msg.elapsedSeconds);
+    clockSubEl.textContent = 'Snapshot ' + (msg.currentIndex + 1) + ' / ' + msg.totalFiles;
+  });
+  connection.on('fightResulted', (msg) => {
+    clockSubEl.textContent = 'Fight resulted (' + msg.ticketsSettled + ' tickets settled)';
+    window.parent && window.parent.postMessage({ type: 'FIGHT_RESULTED', ...msg }, '*');
+  });
+  connection.onreconnecting(() => setConn('down'));
+  connection.onreconnected(() => { setConn('live'); connection.invoke('JoinFight', fightId).catch(()=>{}); });
+  connection.onclose(() => setConn('down'));
+
+  connection.start()
+    .then(() => { setConn('live'); return connection.invoke('JoinFight', fightId); })
+    .catch(err => { console.error('SignalR connect failed', err); setConn('down'); });
+})();
+</script>
+</body>
+</html>

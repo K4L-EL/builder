@@ -2,10 +2,14 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using BetBuilder.Api.GrpcServices;
 using BetBuilder.Api.Health;
+using BetBuilder.Api.Hubs;
 using BetBuilder.Api.Middleware;
+using BetBuilder.Application.Bingo;
 using BetBuilder.Application.Interfaces;
 using BetBuilder.Application.Pricing;
+using BetBuilder.Application.Resulting;
 using BetBuilder.Application.Validation;
+using BetBuilder.Infrastructure.Csv;
 using BetBuilder.Infrastructure.Data;
 using BetBuilder.Infrastructure.Hosting;
 using BetBuilder.Infrastructure.Rules;
@@ -48,9 +52,17 @@ builder.Services.AddSingleton<IMarginService, MarginService>();
 builder.Services.AddSingleton<IComboPricingService, ComboPricingService>();
 
 builder.Services.AddSingleton<IFightSimulationService, FightSimulationService>();
+builder.Services.AddSingleton<StatsFeedService>();
+builder.Services.AddSingleton<IStatsFeedService>(sp => sp.GetRequiredService<StatsFeedService>());
+builder.Services.AddSingleton<IStatsFeedAccessor>(sp => sp.GetRequiredService<StatsFeedService>());
+builder.Services.AddSingleton<IFightBroadcaster, FightHubBroadcaster>();
+builder.Services.AddSingleton<ILegOutcomeResolver, DefaultLegOutcomeResolver>();
+builder.Services.AddSingleton<IBingoCardGenerator, BingoCardGenerator>();
+builder.Services.AddSingleton<IBingoCardCache, BingoCardCache>();
 
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
+builder.Services.AddScoped<IFightResultingService, FightResultingService>();
 
 builder.Services.AddHostedService<DatabaseMigrationService>();
 builder.Services.AddHostedService<SnapshotLoaderService>();
@@ -58,6 +70,12 @@ builder.Services.AddHostedService<SnapshotLoaderService>();
 builder.Services.AddGrpc(opts =>
 {
     opts.MaxReceiveMessageSize = 10 * 1024 * 1024; // 10 MB for large matrices
+});
+
+builder.Services.AddSignalR(opts =>
+{
+    opts.EnableDetailedErrors = true;
+    opts.MaximumReceiveMessageSize = 1 * 1024 * 1024; // 1 MB
 });
 
 builder.Services.AddControllers(opts =>
@@ -79,10 +97,14 @@ builder.WebHost.ConfigureKestrel(opts =>
 
 builder.Services.AddCors(opts =>
 {
+    // Reflect any origin so SignalR (which requires AllowCredentials for sticky sessions)
+    // still works when embedded in a cross-origin iframe. Same-origin iframe embeds are
+    // unaffected. Tighten this to a configured allow-list before going to production.
     opts.AddDefaultPolicy(policy => policy
-        .AllowAnyOrigin()
+        .SetIsOriginAllowed(_ => true)
         .AllowAnyMethod()
-        .AllowAnyHeader());
+        .AllowAnyHeader()
+        .AllowCredentials());
 });
 
 builder.Services.AddHealthChecks()
@@ -99,6 +121,7 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapControllers();
 app.MapGrpcService<SnapshotIngestService>();
+app.MapHub<FightHub>(FightHub.Path);
 app.MapHealthChecks("/health");
 
 app.Run();

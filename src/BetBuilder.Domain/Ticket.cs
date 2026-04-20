@@ -14,6 +14,7 @@ public sealed class Ticket
     public Guid Id { get; set; }
     public string UserId { get; set; } = default!;
     public string SnapshotId { get; set; } = default!;
+    public string EventId { get; set; } = "default";
     public string LegsJson { get; set; } = "[]";
     public decimal Stake { get; set; }
     public decimal Odds { get; set; }

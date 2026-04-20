@@ -33,6 +33,7 @@ public sealed class BetBuilderDbContext : DbContext
             e.Property(t => t.Id).HasColumnName("id");
             e.Property(t => t.UserId).HasColumnName("user_id").HasMaxLength(256);
             e.Property(t => t.SnapshotId).HasColumnName("snapshot_id").HasMaxLength(128);
+            e.Property(t => t.EventId).HasColumnName("event_id").HasMaxLength(128).HasDefaultValue("default");
             e.Property(t => t.LegsJson).HasColumnName("legs").HasColumnType("text");
             e.Property(t => t.Stake).HasColumnName("stake").HasPrecision(18, 2);
             e.Property(t => t.Odds).HasColumnName("odds").HasPrecision(18, 4);
@@ -42,6 +43,7 @@ public sealed class BetBuilderDbContext : DbContext
             e.Property(t => t.PlacedAt).HasColumnName("placed_at");
             e.Property(t => t.SettledAt).HasColumnName("settled_at");
             e.HasIndex(t => t.UserId);
+            e.HasIndex(t => t.EventId);
         });
     }
 }

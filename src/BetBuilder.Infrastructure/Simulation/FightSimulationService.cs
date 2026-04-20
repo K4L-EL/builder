@@ -1,7 +1,9 @@
 using System.Text;
 using BetBuilder.Application.Interfaces;
+using BetBuilder.Application.Resulting;
 using BetBuilder.Infrastructure.Snapshots;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace BetBuilder.Infrastructure.Simulation;
@@ -14,6 +16,8 @@ public sealed class SimulationStatus
     public double Speed { get; init; }
     public string? CurrentTimestamp { get; init; }
     public double ElapsedFightSeconds { get; init; }
+    public string? FightId { get; init; }
+    public int StatsFileCount { get; init; }
 }
 
 public interface IFightSimulationService
@@ -27,11 +31,15 @@ public sealed class FightSimulationService : IFightSimulationService
 {
     private readonly IPricingSnapshotFactory _factory;
     private readonly IActiveSnapshotStore _store;
+    private readonly IStatsFeedService _statsFeed;
+    private readonly IFightBroadcaster _broadcaster;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<FightSimulationService> _logger;
     private readonly string _mockDataDirectory;
 
     private readonly object _lock = new();
     private string[] _sortedFiles = Array.Empty<string>();
+    private string[] _sortedStatsFiles = Array.Empty<string>();
     private CancellationTokenSource? _cts;
     private Task? _runningTask;
 
@@ -39,15 +47,22 @@ public sealed class FightSimulationService : IFightSimulationService
     private volatile int _currentIndex;
     private double _speed = 1.0;
     private volatile string? _currentTimestamp;
+    private volatile string _currentFightId = "default";
 
     public FightSimulationService(
         IPricingSnapshotFactory factory,
         IActiveSnapshotStore store,
+        IStatsFeedService statsFeed,
+        IFightBroadcaster broadcaster,
+        IServiceScopeFactory scopeFactory,
         IConfiguration configuration,
         ILogger<FightSimulationService> logger)
     {
         _factory = factory;
         _store = store;
+        _statsFeed = statsFeed;
+        _broadcaster = broadcaster;
+        _scopeFactory = scopeFactory;
         _logger = logger;
 
         _mockDataDirectory = configuration["Simulation:MockDataDirectory"]
@@ -61,14 +76,23 @@ public sealed class FightSimulationService : IFightSimulationService
         if (!Directory.Exists(_mockDataDirectory))
         {
             _logger.LogWarning("Mock-data directory not found at {Dir}. Simulation unavailable.", _mockDataDirectory);
-            return;
+        }
+        else
+        {
+            _sortedFiles = Directory.GetFiles(_mockDataDirectory, "*.csv")
+                .OrderBy(f => Path.GetFileName(f))
+                .ToArray();
+
+            _logger.LogInformation("Fight simulation: found {Count} matrix CSV files in {Dir}",
+                _sortedFiles.Length, _mockDataDirectory);
         }
 
-        _sortedFiles = Directory.GetFiles(_mockDataDirectory, "*.csv")
-            .OrderBy(f => Path.GetFileName(f))
-            .ToArray();
-
-        _logger.LogInformation("Fight simulation: found {Count} CSV files in {Dir}", _sortedFiles.Length, _mockDataDirectory);
+        _sortedStatsFiles = _statsFeed.GetSortedFiles().ToArray();
+        if (_sortedStatsFiles.Length > 0)
+        {
+            _logger.LogInformation("Fight simulation: found {Count} stats CSV files in {Dir}",
+                _sortedStatsFiles.Length, _statsFeed.StatsDirectory);
+        }
     }
 
     public SimulationStatus GetStatus() => BuildStatus();
@@ -93,6 +117,7 @@ public sealed class FightSimulationService : IFightSimulationService
             _speed = speed;
             _currentIndex = 0;
             _currentTimestamp = null;
+            _statsFeed.Reset();
             _cts = new CancellationTokenSource();
 
             var token = _cts.Token;
@@ -119,6 +144,7 @@ public sealed class FightSimulationService : IFightSimulationService
 
     private async Task RunLoop(CancellationToken ct)
     {
+        var completedNaturally = false;
         try
         {
             for (var i = 0; i < _sortedFiles.Length && !ct.IsCancellationRequested; i++)
@@ -136,15 +162,62 @@ public sealed class FightSimulationService : IFightSimulationService
                     _logger.LogError(ex, "Failed to feed snapshot from {File}", Path.GetFileName(file));
                 }
 
+                // Feed a parallel stats row if available (matched by index; if there are
+                // fewer stats files than matrix files the remainder is skipped gracefully).
+                if (i < _sortedStatsFiles.Length)
+                {
+                    try
+                    {
+                        await _statsFeed.FeedFromFile(_sortedStatsFiles[i], _currentFightId, ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Stats feed failed for {File}", Path.GetFileName(_sortedStatsFiles[i]));
+                    }
+                }
+
+                try
+                {
+                    await _broadcaster.SnapshotAdvanced(
+                        _currentFightId,
+                        _currentTimestamp ?? string.Empty,
+                        i,
+                        _sortedFiles.Length,
+                        i * 5.0);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "SnapshotAdvanced broadcast failed (hub may have no listeners).");
+                }
+
                 var delayMs = (int)(5000.0 / _speed);
                 await Task.Delay(delayMs, ct);
             }
+
+            completedNaturally = !ct.IsCancellationRequested;
         }
         catch (OperationCanceledException) { }
         finally
         {
             _isPlaying = false;
             _logger.LogInformation("Fight simulation loop ended at index {Index}/{Total}", _currentIndex, _sortedFiles.Length);
+        }
+
+        if (completedNaturally)
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var resulter = scope.ServiceProvider.GetRequiredService<IFightResultingService>();
+                var report = await resulter.ResolveFightAsync(_currentFightId, CancellationToken.None);
+                _logger.LogInformation(
+                    "Fight {FightId} resulted: {Legs} legs resolved, {Tickets} tickets settled, total payout {Payout}",
+                    _currentFightId, report.LegsResolved, report.TicketsSettled, report.TotalPayout);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Auto-resulting failed for fight {FightId}", _currentFightId);
+            }
         }
     }
 
@@ -199,6 +272,7 @@ public sealed class FightSimulationService : IFightSimulationService
         var snapshot = _factory.BuildFromContent(content);
         _store.LoadSnapshot(snapshot);
         _store.SetActiveSnapshot(snapshot.SnapshotId);
+        _currentFightId = string.IsNullOrWhiteSpace(snapshot.EventId) ? "default" : snapshot.EventId;
 
         _logger.LogDebug("Simulation fed snapshot {Id}: {Legs} legs, {Scenarios} scenarios",
             snapshot.SnapshotId, snapshot.LegCount, snapshot.ScenarioCount);
@@ -211,6 +285,8 @@ public sealed class FightSimulationService : IFightSimulationService
         TotalFiles = _sortedFiles.Length,
         Speed = _speed,
         CurrentTimestamp = _currentTimestamp,
-        ElapsedFightSeconds = _currentIndex * 5.0
+        ElapsedFightSeconds = _currentIndex * 5.0,
+        FightId = _currentFightId,
+        StatsFileCount = _sortedStatsFiles.Length
     };
 }

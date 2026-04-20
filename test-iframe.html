@@ -9,60 +9,144 @@
     margin: 0;
     min-height: 100vh;
     background: #1a1a2e;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     font-family: -apple-system, sans-serif;
+    padding: 20px;
+    color: #e6edf3;
   }
-  .wrapper {
+  h1 {
     text-align: center;
-  }
-  .wrapper h2 {
-    color: #8b8b9e;
-    font-size: 13px;
+    color: #e6edf3;
+    font-size: 18px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    margin-bottom: 16px;
+    margin-bottom: 6px;
   }
+  .hint {
+    text-align: center;
+    color: #8b8b9e;
+    font-size: 12px;
+    margin-bottom: 20px;
+  }
+  .hint code {
+    background: #0d1117; padding: 2px 6px; border-radius: 4px; color: #00dc82;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+    gap: 16px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  .panel {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .panel h2 {
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: #8b8b9e;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .panel h2 .tag { color: #00dc82; font-family: monospace; }
   iframe {
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    border: none;
+    border-radius: 8px;
+    width: 100%;
+    height: 760px;
+    background: #0d1117;
+    display: block;
   }
   #log {
-    max-width: 480px;
     margin: 20px auto 0;
-    text-align: left;
+    max-width: 1600px;
     color: #00dc82;
     font-family: monospace;
-    font-size: 12px;
+    font-size: 11px;
     background: #0d1117;
+    border: 1px solid #30363d;
     border-radius: 8px;
     padding: 12px;
-    max-height: 150px;
+    max-height: 220px;
     overflow-y: auto;
-    display: none;
   }
+  #log .line { padding: 2px 0; border-bottom: 1px dashed #1c2128; }
+  #log .line.stats { color: #58a6ff; }
+  #log .line.bet { color: #00dc82; }
+  #log .line.leg { color: #f0c000; }
+  #log .line.settle { color: #ff79c6; }
 </style>
 </head>
 <body>
-<div class="wrapper">
-  <h2>Iframe Embed Test</h2>
-  <iframe
-    src="http://localhost:8080?userId=demo_user_1"
-    width="480"
-    height="800"
-    style="border:none; border-radius:12px;"
-  ></iframe>
-  <div id="log"></div>
+<h1>BetBuilder Iframe Smoke Test</h1>
+<p class="hint">
+  Parent page consuming 3 iframes: main app, live stats, bingo cards.
+  Pass <code>?userId=X&amp;fightId=Y</code> to target a specific user/fight.
+  &middot; Prefer a freeform, draggable layout? Try the
+  <a href="http://localhost:8080/workbench.html" target="_blank" style="color:#00dc82">Workbench</a>.
+</p>
+
+<div class="grid">
+  <div class="panel">
+    <h2>Main App <span class="tag">/ userId=demo_user_1</span></h2>
+    <iframe id="main-frame" src="http://localhost:8080?userId=demo_user_1"></iframe>
+  </div>
+  <div class="panel">
+    <h2>Live Stats <span class="tag">/ fightId=default</span></h2>
+    <iframe id="stats-frame" src="http://localhost:8080/stats.html?fightId=default"></iframe>
+  </div>
+  <div class="panel">
+    <h2>Bingo Cards <span class="tag">/ fightId=default</span></h2>
+    <iframe id="bingo-frame" src="http://localhost:8080/bingo.html?fightId=default&userId=demo_user_1"></iframe>
+  </div>
 </div>
+
+<div id="log"><div class="line">Event log (parent listening for postMessage)...</div></div>
+
 <script>
   const log = document.getElementById('log');
+  function add(cls, txt) {
+    const d = document.createElement('div');
+    d.className = 'line ' + cls;
+    d.textContent = '[' + new Date().toLocaleTimeString() + '] ' + txt;
+    log.prepend(d);
+  }
   window.addEventListener('message', (e) => {
-    if (e.data?.type === 'BETBUILDER_BET_PLACED') {
-      log.style.display = 'block';
-      const line = document.createElement('div');
-      line.textContent = `[TICKET] ${e.data.ticketId} · ${e.data.legs.length} legs @ ${e.data.odds.toFixed(2)} · $${e.data.stake} → $${e.data.potentialPayout.toFixed(2)}`;
-      log.prepend(line);
-      console.log('Ticket placed:', e.data);
+    const data = e.data || {};
+    switch (data.type) {
+      case 'BETBUILDER_BET_PLACED':
+        add('bet', 'MAIN BET: ' + data.ticketId + ' - ' + (data.legs?.length || 0) +
+          ' legs @ ' + Number(data.odds).toFixed(2) + ' - $' + data.stake +
+          ' -> $' + Number(data.potentialPayout).toFixed(2));
+        break;
+      case 'BINGO_BET_PLACED':
+        add('bet', 'BINGO BET: ' + data.ticketId + ' (card ' + data.cardId + ') $' +
+          data.stake + ' -> $' + Number(data.potentialPayout).toFixed(2));
+        break;
+      case 'BINGO_CARD_SETTLED':
+        add('settle', 'BINGO SETTLED: ' + data.ticketId + ' - ' + data.result +
+          ' - $' + Number(data.payout).toFixed(2));
+        break;
+      case 'STATS_UPDATE':
+        const metrics = data.stats?.metrics || {};
+        const rh = metrics.red_health ?? metrics.redHealth;
+        const bh = metrics.blue_health ?? metrics.blueHealth;
+        if (rh != null || bh != null)
+          add('stats', 'STATS t=' + (data.stats?.elapsedSeconds || 0).toFixed(0) +
+            's - red ' + (rh ?? '-') + ' / blue ' + (bh ?? '-'));
+        break;
+      case 'LEG_RESOLVED':
+        add('leg', 'LEG: ' + data.leg + ' -> ' + data.outcome);
+        break;
+      case 'FIGHT_RESULTED':
+        add('settle', 'FIGHT RESULTED: ' + data.legsResolved + ' legs, ' +
+          data.ticketsSettled + ' tickets, payout $' + Number(data.totalPayout).toFixed(2));
+        break;
     }
   });
 </script>

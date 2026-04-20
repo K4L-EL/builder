@@ -62,6 +62,7 @@ public sealed class TicketController : ControllerBase
         ticketId = t.Id,
         userId = t.UserId,
         snapshotId = t.SnapshotId,
+        eventId = t.EventId,
         legs = JsonSerializer.Deserialize<string[]>(t.LegsJson) ?? Array.Empty<string>(),
         stake = t.Stake,
         odds = t.Odds,

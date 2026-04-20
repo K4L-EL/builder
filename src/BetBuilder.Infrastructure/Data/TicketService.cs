@@ -10,15 +10,18 @@ public sealed class TicketService : ITicketService
     private readonly BetBuilderDbContext _db;
     private readonly IComboPricingService _pricingService;
     private readonly IWalletService _walletService;
+    private readonly IActiveSnapshotStore _snapshotStore;
 
     public TicketService(
         BetBuilderDbContext db,
         IComboPricingService pricingService,
-        IWalletService walletService)
+        IWalletService walletService,
+        IActiveSnapshotStore snapshotStore)
     {
         _db = db;
         _pricingService = pricingService;
         _walletService = walletService;
+        _snapshotStore = snapshotStore;
     }
 
     public async Task<Ticket> PlaceBet(PlaceBetRequest request)
@@ -43,11 +46,18 @@ public sealed class TicketService : ITicketService
 
         await _walletService.HoldStake(request.UserId, request.Stake);
 
+        var eventId = request.EventId;
+        if (string.IsNullOrWhiteSpace(eventId))
+            eventId = _snapshotStore.GetSnapshot(pricingResult.SnapshotId)?.EventId
+                      ?? _snapshotStore.GetActiveSnapshot()?.EventId
+                      ?? "default";
+
         var ticket = new Ticket
         {
             Id = Guid.NewGuid(),
             UserId = request.UserId,
             SnapshotId = pricingResult.SnapshotId,
+            EventId = eventId,
             LegsJson = JsonSerializer.Serialize(request.Legs),
             Stake = request.Stake,
             Odds = odds,
@@ -74,6 +84,14 @@ public sealed class TicketService : ITicketService
     public async Task<Ticket?> GetTicket(Guid ticketId)
     {
         return await _db.Tickets.FindAsync(ticketId);
+    }
+
+    public async Task<IReadOnlyList<Ticket>> GetOpenTicketsForEvent(string eventId)
+    {
+        return await _db.Tickets
+            .Where(t => t.EventId == eventId && t.Status == TicketStatus.Placed)
+            .OrderBy(t => t.PlacedAt)
+            .ToListAsync();
     }
 
     public async Task<Ticket> Settle(Guid ticketId, TicketSettleResult result)

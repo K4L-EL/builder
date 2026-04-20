@@ -25,6 +25,16 @@ public sealed class DatabaseMigrationService : IHostedService
             using var scope = _services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<BetBuilderDbContext>();
             await db.Database.EnsureCreatedAsync(cancellationToken);
+
+            // Idempotent schema sync for columns added after the initial EnsureCreated.
+            // This project does not use EF migrations; we apply narrow ALTER TABLE guards here.
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS event_id varchar(128) NOT NULL DEFAULT 'default';",
+                cancellationToken);
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE INDEX IF NOT EXISTS ix_tickets_event_id ON tickets(event_id);",
+                cancellationToken);
+
             _logger.LogInformation("Database schema ready.");
         }
         catch (Exception ex)
