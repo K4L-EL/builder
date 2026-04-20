@@ -10,6 +10,7 @@ using BetBuilder.Infrastructure.Data;
 using BetBuilder.Infrastructure.Hosting;
 using BetBuilder.Infrastructure.Rules;
 using BetBuilder.Infrastructure.Snapshots;
+using BetBuilder.Infrastructure.Simulation;
 using BetBuilder.Infrastructure.State;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
@@ -45,6 +46,8 @@ builder.Services.AddSingleton<IComboValidator, ComboValidator>();
 builder.Services.AddSingleton<IJointProbabilityCalculator, JointProbabilityCalculator>();
 builder.Services.AddSingleton<IMarginService, MarginService>();
 builder.Services.AddSingleton<IComboPricingService, ComboPricingService>();
+
+builder.Services.AddSingleton<IFightSimulationService, FightSimulationService>();
 
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<ITicketService, TicketService>();

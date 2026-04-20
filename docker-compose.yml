@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: betbuilder
       POSTGRES_DB: betbuilder
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -18,9 +18,11 @@ services:
       - "8080:8080"
     volumes:
       - ./data:/app/data:ro
+      - ./Mock-data:/app/mock-data:ro
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - Data__DataDirectory=/app/data
+      - Simulation__MockDataDirectory=/app/mock-data
       - Data__DefaultSnapshot=ts0
       - Pricing__BaseMarginPercent=5.0
       - Pricing__MarginScaleFactor=7.5
