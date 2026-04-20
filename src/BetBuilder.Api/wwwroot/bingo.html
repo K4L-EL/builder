@@ -31,6 +31,26 @@
     min-height: 100vh;
     overflow-x: hidden;
   }
+
+  /* Themed scrollbars - bingo uses a green->purple accent on hover */
+  html { scrollbar-width: thin; scrollbar-color: #484f58 transparent; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #484f58, var(--border));
+    border: 2px solid var(--surface);
+    border-radius: 10px;
+    min-height: 40px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--accent), var(--purple));
+  }
+  ::-webkit-scrollbar-thumb:active { background: var(--accent); }
+  ::-webkit-scrollbar-corner { background: var(--surface); }
+
   .app { max-width: 480px; margin: 0 auto; padding: 14px; }
 
   .header {
