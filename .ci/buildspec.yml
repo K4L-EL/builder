@@ -1,46 +1,39 @@
 version: 0.2
 
-env:
-  variables:
-    REGION: "eu-west-2"
-    CONTAINER_NAME: "betbuilder"
+# Env vars ENV, REGION, PROJECT, ECR_REPO_URL, CONTAINER_NAME are injected
+# by the probet `modules/pipeline` CodeBuild project — do not redeclare.
+# The ECR repo is provisioned by tofu (modules/ecr); this buildspec never
+# creates it.
 
 phases:
   install:
     commands:
       - ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
-      - COMMIT_SHA=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
-      - REPO_NAME="$ENV-betbuilder"
-      - IMAGE_URI=$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$REPO_NAME
+      - COMMIT_SHA=$(echo "$CODEBUILD_RESOLVED_SOURCE_VERSION" | cut -c 1-7)
+      - echo "Building $CONTAINER_NAME for env=$ENV commit=$COMMIT_SHA"
+      - echo "Pushing to $ECR_REPO_URL"
 
   pre_build:
     commands:
-      - |
-        REPO_EXISTS=$(aws ecr describe-repositories --region "$REGION" --repository-names "$REPO_NAME" > /dev/null 2>&1; echo $?)
-        if [ $REPO_EXISTS -ne 0 ]; then
-          echo "Repository $REPO_NAME does not exist. Creating..."
-          aws ecr create-repository --repository-name "$REPO_NAME" --region "$REGION"
-        else
-          echo "Repository $REPO_NAME already exists."
-        fi
-      - aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+      - aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com"
 
   build:
     commands:
       - echo "Build started on $(date)"
-      - docker build -t $IMAGE_URI:latest -t $IMAGE_URI:$COMMIT_SHA .
+      - docker build -t "$ECR_REPO_URL:latest" -t "$ECR_REPO_URL:$COMMIT_SHA" .
       - echo "Build completed on $(date)"
 
   post_build:
     commands:
-      - docker push $IMAGE_URI:latest
-      - docker push $IMAGE_URI:$COMMIT_SHA
-      - printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$IMAGE_URI:latest" > imagedef.json
-      - cat imagedef.json
+      - echo "Pushing $ECR_REPO_URL:latest and :$COMMIT_SHA"
+      - docker push "$ECR_REPO_URL:latest"
+      - docker push "$ECR_REPO_URL:$COMMIT_SHA"
+      - printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$ECR_REPO_URL:$COMMIT_SHA" > imagedefinitions.json
+      - cat imagedefinitions.json
 
 artifacts:
   files:
-    - imagedef.json
+    - imagedefinitions.json
 
 cache:
   paths:

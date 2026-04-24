@@ -24,22 +24,49 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<DataSettings>(builder.Configuration.GetSection(DataSettings.SectionName));
 builder.Services.Configure<PricingSettings>(builder.Configuration.GetSection(PricingSettings.SectionName));
 
-// PostgreSQL -- Railway provides DATABASE_URL, or fall back to connection string in config
-var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
-if (!string.IsNullOrEmpty(databaseUrl))
+// PostgreSQL connection — three sources, in priority order:
+//   1. DATABASE_URL          → Railway-style postgres://user:pass@host:port/db
+//   2. DB_HOST (+ DB_*)      → AWS ECS pattern (host/port/db/user as env vars,
+//                              password injected from Secrets Manager)
+//   3. ConnectionStrings:Default → local dev fallback
+//
+// DB_SCHEMA is appended as Search Path on every variant so unqualified table
+// names in raw SQL (and EF's HasDefaultSchema in BetBuilderDbContext) all
+// resolve to the same Postgres schema. Defaults to "public" when unset.
+var schema = Environment.GetEnvironmentVariable("DB_SCHEMA")?.Trim();
+var searchPathSuffix = !string.IsNullOrEmpty(schema) && !string.Equals(schema, "public", StringComparison.OrdinalIgnoreCase)
+    ? $";Search Path={schema}"
+    : string.Empty;
+
+string buildConnectionString()
 {
-    var uri = new Uri(databaseUrl);
-    var userInfo = uri.UserInfo.Split(':');
-    var connStr = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')}" +
-                  $";Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
-    builder.Services.AddDbContext<BetBuilderDbContext>(opts => opts.UseNpgsql(connStr));
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+    if (!string.IsNullOrEmpty(databaseUrl))
+    {
+        var uri = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':');
+        return $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')}" +
+               $";Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true" +
+               searchPathSuffix;
+    }
+
+    var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
+    if (!string.IsNullOrEmpty(dbHost))
+    {
+        var dbPort = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
+        var dbName = Environment.GetEnvironmentVariable("DB_NAME") ?? "postgres";
+        var dbUser = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
+        var dbPass = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? string.Empty;
+        return $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPass}" +
+               ";SSL Mode=Require;Trust Server Certificate=true" +
+               searchPathSuffix;
+    }
+
+    return builder.Configuration.GetConnectionString("Default")
+           ?? "Host=localhost;Port=5432;Database=betbuilder;Username=betbuilder;Password=betbuilder" + searchPathSuffix;
 }
-else
-{
-    var connStr = builder.Configuration.GetConnectionString("Default")
-        ?? "Host=localhost;Port=5432;Database=betbuilder;Username=betbuilder;Password=betbuilder";
-    builder.Services.AddDbContext<BetBuilderDbContext>(opts => opts.UseNpgsql(connStr));
-}
+
+builder.Services.AddDbContext<BetBuilderDbContext>(opts => opts.UseNpgsql(buildConnectionString()));
 
 builder.Services.AddSingleton<IActiveSnapshotStore, ActiveSnapshotStore>();
 builder.Services.AddSingleton<ISnapshotSource, LocalSnapshotSource>();

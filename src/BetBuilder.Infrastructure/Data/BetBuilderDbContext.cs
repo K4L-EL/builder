@@ -5,6 +5,27 @@ namespace BetBuilder.Infrastructure.Data;
 
 public sealed class BetBuilderDbContext : DbContext
 {
+    // Resolved once at process start so EF and DatabaseMigrationService agree
+    // on which Postgres schema owns this app's tables. Restricted to a safe
+    // identifier shape — the value is interpolated into a CREATE SCHEMA
+    // statement (DDL can't be parameterized), so anything else is rejected.
+    public static string Schema { get; } = ResolveSchema();
+
+    private static string ResolveSchema()
+    {
+        var raw = Environment.GetEnvironmentVariable("DB_SCHEMA")?.Trim();
+        if (string.IsNullOrEmpty(raw))
+        {
+            return "public";
+        }
+        if (!System.Text.RegularExpressions.Regex.IsMatch(raw, "^[a-zA-Z_][a-zA-Z0-9_]*$"))
+        {
+            throw new InvalidOperationException(
+                $"DB_SCHEMA '{raw}' is not a valid Postgres identifier (letters, digits, underscores; must not start with a digit).");
+        }
+        return raw;
+    }
+
     public BetBuilderDbContext(DbContextOptions<BetBuilderDbContext> options) : base(options) { }
 
     public DbSet<Wallet> Wallets => Set<Wallet>();
@@ -12,6 +33,11 @@ public sealed class BetBuilderDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        if (!string.Equals(Schema, "public", StringComparison.OrdinalIgnoreCase))
+        {
+            modelBuilder.HasDefaultSchema(Schema);
+        }
+
         modelBuilder.Entity<Wallet>(e =>
         {
             e.ToTable("wallets");
