@@ -23,11 +23,11 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 COPY --from=build /src/data /app/data
-COPY --from=build /src/Mock-data /app/mock-data
+COPY --from=build /src/Mock-data /app/Mock-data
 
 ENV Data__DataDirectory=/app/data
 ENV Data__DefaultSnapshot=ts0
-ENV Simulation__MockDataDirectory=/app/mock-data
+ENV Simulation__MockDataDirectory=/app/Mock-data
 
 EXPOSE 8080
 
