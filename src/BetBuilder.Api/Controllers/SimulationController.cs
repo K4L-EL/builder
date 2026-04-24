@@ -44,6 +44,29 @@ public class SimulationController : ControllerBase
         var status = _simulation.GetStatus();
         return Ok(status);
     }
+
+    [HttpGet("debug")]
+    public IActionResult Debug([FromServices] IConfiguration config)
+    {
+        var configuredDir = config["Simulation:MockDataDirectory"];
+        var fallbackDir = Path.Combine(AppContext.BaseDirectory, "mock-data");
+        var resolvedDir = configuredDir ?? fallbackDir;
+        var exists = Directory.Exists(resolvedDir);
+        var files = exists ? Directory.GetFiles(resolvedDir, "*.csv").Length : 0;
+        var envVar = Environment.GetEnvironmentVariable("Simulation__MockDataDirectory");
+
+        return Ok(new
+        {
+            configValue = configuredDir,
+            envVar,
+            fallbackDir,
+            resolvedDir,
+            directoryExists = exists,
+            csvFileCount = files,
+            baseDirectory = AppContext.BaseDirectory,
+            workingDirectory = Directory.GetCurrentDirectory()
+        });
+    }
 }
 
 public sealed class SimulationStartRequest
