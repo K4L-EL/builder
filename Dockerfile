@@ -13,6 +13,7 @@ RUN dotnet restore
 COPY src/ src/
 COPY tests/ tests/
 COPY data/ data/
+COPY Mock-data/ Mock-data/
 
 RUN dotnet test tests/BetBuilder.Tests/BetBuilder.Tests.csproj -c Release --no-restore
 RUN dotnet publish src/BetBuilder.Api/BetBuilder.Api.csproj -c Release -o /app/publish --no-restore
@@ -22,9 +23,11 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 COPY --from=build /src/data /app/data
+COPY --from=build /src/Mock-data /app/mock-data
 
 ENV Data__DataDirectory=/app/data
 ENV Data__DefaultSnapshot=ts0
+ENV Simulation__MockDataDirectory=/app/mock-data
 
 EXPOSE 8080
 
