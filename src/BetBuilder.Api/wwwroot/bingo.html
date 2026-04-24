@@ -254,6 +254,22 @@
     animation: toastIn 0.3s ease;
   }
   @keyframes toastIn { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+
+  @media (max-width: 380px) {
+    .app { padding: 10px; }
+    .title { font-size: 15px; }
+    .bingo-grid { gap: 4px; }
+    .bingo-cell { font-size: 7.5px; padding: 2px; border-radius: 6px; }
+    .bingo-cell .mark { font-size: 18px; }
+    .card { padding: 12px; border-radius: 12px; }
+    .card-top { margin-bottom: 8px; }
+    .odds { font-size: 22px; }
+    .theme { font-size: 10px; padding: 3px 8px; }
+    .stake-chip { padding: 5px 10px; font-size: 10px; }
+    .tap-cta { padding: 10px; font-size: 11px; }
+    .toolbar button { padding: 6px; font-size: 10px; }
+    .payout-hint { font-size: 9px; }
+  }
 </style>
 </head>
 <body>

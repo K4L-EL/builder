@@ -298,6 +298,76 @@
     background: var(--surface-2); border: 1px solid var(--border);
   }
   .status-bar .pill.live { color: var(--accent); border-color: var(--accent); }
+
+  /* ===== MOBILE LAYOUT ===== */
+  @media (max-width: 768px) {
+    body { overflow: auto; user-select: auto; }
+
+    .top {
+      flex-wrap: wrap; gap: 6px; padding: 8px 10px;
+    }
+    .top h1 { font-size: 12px; margin-right: 0; }
+    .top .sub { display: none; }
+    .top .id-field { flex: 1; min-width: 100px; }
+    .top .id-field input { width: 60px; font-size: 10px; }
+    .top .btn { font-size: 10px; padding: 5px 8px; }
+
+    .stage-wrap { flex-direction: column; overflow: visible; }
+
+    .rail { display: none; }
+
+    /* Tab bar for mobile */
+    .mobile-tabs {
+      display: flex !important; gap: 2px;
+      padding: 6px 8px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto; flex-shrink: 0;
+      -webkit-overflow-scrolling: touch;
+    }
+    .mobile-tab {
+      flex-shrink: 0; padding: 8px 14px; border-radius: 8px;
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      letter-spacing: 0.5px; font-weight: 700; cursor: pointer;
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--text-dim); white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .mobile-tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .mobile-tab .tab-dot {
+      display: inline-block; width: 6px; height: 6px;
+      border-radius: 50%; margin-right: 6px; vertical-align: middle;
+    }
+    .mobile-tab.main  .tab-dot { background: var(--blue); }
+    .mobile-tab.stats .tab-dot { background: var(--yellow); }
+    .mobile-tab.bingo .tab-dot { background: var(--accent); }
+    .mobile-tab.active .tab-dot { background: var(--bg); }
+
+    .stage {
+      flex: 1; padding: 0; display: flex; flex-direction: column;
+      overflow: hidden; min-height: 0;
+    }
+    .grid {
+      display: none;
+    }
+
+    .mobile-frame-wrap {
+      display: flex !important; flex: 1; min-height: 0;
+    }
+    .mobile-frame-wrap iframe {
+      width: 100%; height: 100%; border: none; flex: 1;
+      background: var(--bg);
+    }
+
+    .status-bar { display: none; }
+    .rail-ghost { display: none !important; }
+
+    .module { display: none !important; }
+    .drop-ghost { display: none !important; }
+  }
+
+  /* Desktop: hide mobile elements */
+  .mobile-tabs { display: none; }
+  .mobile-frame-wrap { display: none; }
 </style>
 </head>
 <body>
@@ -319,6 +389,12 @@
     <button class="btn ghost" id="tidyBtn">TIDY</button>
     <button class="btn ghost" id="resetBtn">RESET</button>
     <button class="btn primary" id="saveBtn">SAVE LAYOUT</button>
+  </div>
+
+  <div class="mobile-tabs" id="mobileTabs">
+    <button class="mobile-tab main active" data-kind="main"><span class="tab-dot"></span>BET BUILDER</button>
+    <button class="mobile-tab stats" data-kind="stats"><span class="tab-dot"></span>LIVE STATS</button>
+    <button class="mobile-tab bingo" data-kind="bingo"><span class="tab-dot"></span>BINGO</button>
   </div>
 
   <div class="stage-wrap">
@@ -353,6 +429,9 @@
     <div class="stage" id="stage">
       <div class="grid" id="grid">
         <div class="drop-ghost" id="dropGhost"></div>
+      </div>
+      <div class="mobile-frame-wrap" id="mobileFrame">
+        <iframe id="mobileIframe" src="about:blank"></iframe>
       </div>
     </div>
   </div>
@@ -886,7 +965,6 @@
     for (const m of state.modules.values()) reloadModule(m.id);
   }
   if (!hadLayout) {
-    // Default starter layout
     createModule('main',  0, 0, 6, 12);
     createModule('stats', 6, 0, 6, 10);
     createModule('bingo', 12, 0, 7, 12);
@@ -895,6 +973,37 @@
   } else {
     hintText.textContent = 'Layout restored from the last session.';
   }
+
+  // ---- mobile tab switching -----------------------------------------------
+  const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+  let mobileActiveKind = 'main';
+
+  function mobileLoadTab(kind) {
+    mobileActiveKind = kind;
+    const iframe = document.getElementById('mobileIframe');
+    if (!iframe) return;
+    iframe.src = urlFor(kind);
+    document.querySelectorAll('.mobile-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.kind === kind);
+    });
+  }
+
+  document.querySelectorAll('.mobile-tab').forEach(tab => {
+    tab.addEventListener('click', () => mobileLoadTab(tab.dataset.kind));
+  });
+
+  [userInput, fightInput].forEach(inp => {
+    inp.addEventListener('change', () => {
+      if (isMobile()) mobileLoadTab(mobileActiveKind);
+    });
+  });
+
+  if (isMobile()) mobileLoadTab('main');
+  window.addEventListener('resize', () => {
+    if (isMobile() && document.getElementById('mobileIframe').src === 'about:blank') {
+      mobileLoadTab(mobileActiveKind);
+    }
+  });
 })();
 </script>
 </body>
