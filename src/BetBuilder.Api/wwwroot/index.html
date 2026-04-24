@@ -621,7 +621,8 @@
 </div>
 
 <script>
-const API = window.location.origin;
+const basePath = window.location.pathname.startsWith('/betbuilder') ? '/betbuilder' : '';
+const API = window.location.origin + basePath;
 const params = new URLSearchParams(window.location.search);
 const userId = params.get('userId') || 'demo_user';
 

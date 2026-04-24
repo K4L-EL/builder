@@ -283,7 +283,8 @@
   const params = new URLSearchParams(window.location.search);
   const fightId = params.get('fightId') || params.get('eventId') || 'default';
   const userId = params.get('userId') || 'demo_user';
-  const API = window.location.origin;
+  const basePath = window.location.pathname.startsWith('/betbuilder') ? '/betbuilder' : '';
+  const API = window.location.origin + basePath;
 
   const cardsEl = document.getElementById('cards');
   const emptyEl = document.getElementById('empty');

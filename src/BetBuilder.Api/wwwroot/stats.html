@@ -215,7 +215,8 @@
 (function() {
   const params = new URLSearchParams(window.location.search);
   const fightId = params.get('fightId') || params.get('eventId') || 'default';
-  const API = window.location.origin;
+  const basePath = window.location.pathname.startsWith('/betbuilder') ? '/betbuilder' : '';
+  const API = window.location.origin + basePath;
 
   document.getElementById('fight-id').textContent = 'fight: ' + fightId;
 

@@ -382,7 +382,8 @@
     bingo: { title: 'BINGO CARDS',path: '/bingo.html',  defaultW: 7, defaultH: 12, acceptsUser: true, acceptsFight: true }
   };
 
-  const api = window.location.origin;
+  const basePath = window.location.pathname.startsWith('/betbuilder') ? '/betbuilder' : '';
+  const api = window.location.origin + basePath;
   const grid = document.getElementById('grid');
   const stage = document.getElementById('stage');
   const dropGhost = document.getElementById('dropGhost');

@@ -95,16 +95,48 @@ builder.WebHost.ConfigureKestrel(opts =>
     opts.ConfigureEndpointDefaults(lo => lo.Protocols = HttpProtocols.Http1AndHttp2);
 });
 
+var corsOrigins = builder.Configuration.GetSection("CorsOrigins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(opts =>
 {
-    // Reflect any origin so SignalR (which requires AllowCredentials for sticky sessions)
-    // still works when embedded in a cross-origin iframe. Same-origin iframe embeds are
-    // unaffected. Tighten this to a configured allow-list before going to production.
-    opts.AddDefaultPolicy(policy => policy
-        .SetIsOriginAllowed(_ => true)
-        .AllowAnyMethod()
-        .AllowAnyHeader()
-        .AllowCredentials());
+    opts.AddDefaultPolicy(policy =>
+    {
+        if (corsOrigins.Length > 0)
+        {
+            var wildcardPatterns = corsOrigins.Where(o => o.Contains('*')).ToArray();
+            var exactOrigins = corsOrigins.Where(o => !o.Contains('*')).ToArray();
+
+            if (wildcardPatterns.Length > 0)
+            {
+                policy.SetIsOriginAllowed(origin =>
+                {
+                    if (exactOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+                        return true;
+
+                    foreach (var pattern in wildcardPatterns)
+                    {
+                        var regex = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)
+                            .Replace("\\*", ".*") + "$";
+                        if (System.Text.RegularExpressions.Regex.IsMatch(
+                            origin, regex, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                            return true;
+                    }
+                    return false;
+                });
+            }
+            else
+            {
+                policy.WithOrigins(exactOrigins);
+            }
+
+            policy.AllowCredentials();
+        }
+        else
+        {
+            policy.AllowAnyOrigin();
+        }
+
+        policy.AllowAnyMethod().AllowAnyHeader();
+    });
 });
 
 builder.Services.AddHealthChecks()
@@ -117,7 +149,11 @@ var app = builder.Build();
 
 app.UseMiddleware<GlobalExceptionHandler>();
 app.UseCors();
-app.UseDefaultFiles();
+
+var defaultFileOptions = new DefaultFilesOptions();
+defaultFileOptions.DefaultFileNames.Clear();
+defaultFileOptions.DefaultFileNames.Add("workbench.html");
+app.UseDefaultFiles(defaultFileOptions);
 app.UseStaticFiles();
 app.MapControllers();
 app.MapGrpcService<SnapshotIngestService>();
